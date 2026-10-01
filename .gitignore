@@ -1,0 +1,21 @@
+# Entorno virtual
+venv/
+.venv/
+env/
+
+# Variables de entorno (claves de API)
+.env
+
+# Caché de Python
+__pycache__/
+*.pyc
+
+# Caché de pytest
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
