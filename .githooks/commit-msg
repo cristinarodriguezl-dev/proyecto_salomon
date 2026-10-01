@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+MENSAJE=$(head -n 1 "$1")
+
+case "$MENSAJE" in
+  Merge*|Revert*) exit 0 ;;
+esac
+
+VERBOS="add|fix|update|remove|docs|style|refactor|test|chore"
+ERRORES=()
+
+# Regla 1: formato "verbo: mensaje"
+if ! echo "$MENSAJE" | grep -qE "^($VERBOS): "; then
+  ERRORES+=("Debe empezar por un verbo permitido y ': ' (add, fix, update, remove, docs, style, refactor, test, chore)")
+fi
+
+# Regla 2: mínimo 10 caracteres tras el verbo
+DESCRIPCION=$(echo "$MENSAJE" | sed -E "s/^($VERBOS): //")
+if [ "${#DESCRIPCION}" -lt 10 ]; then
+  ERRORES+=("La descripción es demasiado corta (mínimo 10 caracteres)")
+fi
+
+# Regla 3: palabras vagas (en inglés)
+if echo "$MENSAJE" | grep -qiwE "(changes|stuff|things|misc|wip|asdf|final|done|tmp|temp)"; then
+  ERRORES+=("Mensaje vago: explica qué hace el commit (evita changes, stuff, wip, final...)")
+fi
+
+# Regla 4: máximo 72 caracteres
+if [ "${#MENSAJE}" -gt 72 ]; then
+  ERRORES+=("La primera línea tiene ${#MENSAJE} caracteres (máximo 72)")
+fi
+
+# Regla 5: debe estar en inglés
+# 5a: sin caracteres fuera del ASCII (ñ, tildes, ¿, ¡...)
+if echo "$MENSAJE" | LC_ALL=C grep -q '[^ -~]'; then
+  ERRORES+=("El mensaje contiene caracteres no ingleses (ñ, tildes, ¿, ¡...). Escríbelo en inglés")
+fi
+# 5b: sin palabras españolas frecuentes
+if echo "$DESCRIPCION" | grep -qiwE "(el|la|los|las|del|de|con|para|por|que|un|una|y|en|al|su|sus|se|es|crea|agrega|corrige|arregla|elimina|actualiza|cambia|modifica|implementa|ajusta|quita|mejora|nuevo|nueva)"; then
+  ERRORES+=("Parece que el mensaje está en español. Los commits deben ir en inglés")
+fi
+
+if [ "${#ERRORES[@]}" -eq 0 ]; then
+  echo "✅ Commit aceptado"
+  exit 0
+fi
+
+echo "🚫 COMMIT RECHAZADO"
+echo "Tu mensaje: \"$MENSAJE\""
+for e in "${ERRORES[@]}"; do
+  echo " ❌ $e"
+done
+echo ""
+echo "Formato: verbo: mensaje en inglés"
+echo "Ejemplos válidos:"
+echo " add: create Article model with its fields"
+echo " fix: handle missing Wikipedia page in scraper"
+exit 1
