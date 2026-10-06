@@ -12,5 +12,5 @@ class Settings:
 def load_settings() -> Settings:
     return Settings(
         gemini_api_key=os.getenv("GEMINI_API_KEY", ""),
-        wikipedia_timeout=int(os.getenv("WIKIPEDIA_TIMEOUT", "")),
+        wikipedia_timeout=int(os.getenv("WIKIPEDIA_TIMEOUT", "10")),
     )
