@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Git for Windows necesita esta ruta para usar head, grep y sed en el hook.
+export PATH="/usr/bin:/bin:$PATH"
+
 MENSAJE=$(head -n 1 "$1")
 
 case "$MENSAJE" in
