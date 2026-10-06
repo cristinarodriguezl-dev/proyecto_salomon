@@ -14,16 +14,30 @@ class WikipediaClient:
         self.timeout_seconds = timeout_seconds
 
     def fetch(self, topic: str) -> requests.Response:
-        """Devuelve la respuesta de Wikipedia o informa de un timeout."""
+        """Devuelve la respuesta o informa de fallos de la consulta."""
         try:
-            return requests.get(
+            response = requests.get(
                 WIKIPEDIA_SEARCH_URL,
                 params={"search": topic},
                 headers={"User-Agent": USER_AGENT},
                 timeout=self.timeout_seconds,
             )
+            response.raise_for_status()
+            return response
         except requests.exceptions.Timeout as exc:
             raise TimeoutError(
                 "La consulta a Wikipedia superó el tiempo de espera de "
                 f"{self.timeout_seconds:g} segundos."
+            ) from exc
+        except requests.exceptions.ConnectionError as exc:
+            raise requests.exceptions.ConnectionError(
+                f"No se pudo conectar con Wikipedia: {exc}"
+            ) from exc
+        except requests.exceptions.HTTPError as exc:
+            status_code = (
+                exc.response.status_code if exc.response is not None else "desconocido"
+            )
+            raise requests.exceptions.HTTPError(
+                f"Wikipedia respondió con un error HTTP (código {status_code}).",
+                response=exc.response,
             ) from exc
