@@ -1,6 +1,6 @@
 from google import genai
 
-MODEL_NAME = "gemini-3.8-flash"
+MODEL_NAME = "gemini-3.1-flash-lite"
 
 class AIClient:
     """Talks to the Gemini API."""
