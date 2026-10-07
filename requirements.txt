@@ -1,4 +1,8 @@
 beautifulsoup4==4.15.0
+certifi==2026.7.22
+charset-normalizer==3.5.2
+coverage==7.16.2
+idna==3.20
 colorama==0.4.6
 iniconfig==2.3.0
 packaging==26.3
@@ -6,8 +10,10 @@ pluggy==1.6.0
 prompt_toolkit==3.0.53
 Pygments==2.21.0
 pytest==9.1.1
+pytest-cov==7.1.0
 python-dotenv==1.2.4
 questionary==2.1.1
 requests==2.34.2
+urllib3==2.8.0
 wcwidth==0.9.2
 google-genai==2.28.0
