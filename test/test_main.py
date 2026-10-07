@@ -28,9 +28,16 @@ SUCCESS_RESPONSE = make_response(
     """
 )
 
+ARTICLE_OUTPUT = "Árbol\n\nPrimer párrafo.\nSegundo párrafo.\n"
+CONTINUATION_MENU_OUTPUT = (
+    "\n¿Qué quieres hacer ahora?\n1. Buscar otro tema\n2. Salir\n"
+)
+EXIT_OUTPUT = "Programa finalizado.\n"
+
 
 def test_main_searches_and_displays_the_original_article(monkeypatch, capsys) -> None:
-    fake_input = Mock(return_value="  Árbol  ")
+    answers = iter(["  Árbol  ", "2"])
+    fake_input = Mock(side_effect=lambda prompt: next(answers))
     monkeypatch.setattr("builtins.input", fake_input)
 
     with patch(
@@ -45,9 +52,9 @@ def test_main_searches_and_displays_the_original_article(monkeypatch, capsys) ->
         headers={"User-Agent": USER_AGENT},
         timeout=10.0,
     )
-    fake_input.assert_called_once()
+    assert fake_input.call_count == 2
     assert capsys.readouterr().out == (
-        "Árbol\n\nPrimer párrafo.\nSegundo párrafo.\n"
+        ARTICLE_OUTPUT + CONTINUATION_MENU_OUTPUT + EXIT_OUTPUT
     )
 
 
@@ -68,7 +75,7 @@ def test_main_searches_and_displays_the_original_article(monkeypatch, capsys) ->
 def test_main_reports_wikipedia_error_and_allows_another_search(
     first_attempt, expected_error: str, monkeypatch, capsys
 ) -> None:
-    answers = iter(["Árbol", "Música"])
+    answers = iter(["Árbol", "Música", "2"])
     fake_input = Mock(side_effect=lambda prompt: next(answers))
     monkeypatch.setattr("builtins.input", fake_input)
 
@@ -79,8 +86,32 @@ def test_main_reports_wikipedia_error_and_allows_another_search(
         main()
 
     assert get.call_count == 2
-    assert fake_input.call_count == 2
+    assert fake_input.call_count == 3
     assert capsys.readouterr().out == (
         f"{expected_error}\n"
-        "Árbol\n\nPrimer párrafo.\nSegundo párrafo.\n"
+        + ARTICLE_OUTPUT
+        + CONTINUATION_MENU_OUTPUT
+        + EXIT_OUTPUT
+    )
+
+
+def test_main_allows_another_search_and_then_exits(monkeypatch, capsys) -> None:
+    answers = iter(["Árbol", "1", "Música", "2"])
+    fake_input = Mock(side_effect=lambda prompt: next(answers))
+    monkeypatch.setattr("builtins.input", fake_input)
+
+    with patch(
+        "src.scraping.wikipedia_client.requests.get",
+        side_effect=[SUCCESS_RESPONSE, SUCCESS_RESPONSE],
+    ) as get:
+        main()
+
+    assert get.call_count == 2
+    assert fake_input.call_count == 4
+    assert capsys.readouterr().out == (
+        ARTICLE_OUTPUT
+        + CONTINUATION_MENU_OUTPUT
+        + ARTICLE_OUTPUT
+        + CONTINUATION_MENU_OUTPUT
+        + EXIT_OUTPUT
     )
