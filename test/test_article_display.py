@@ -1,27 +1,17 @@
+"""Pruebas de la presentación del contenido original en la terminal."""
+
 from src.models.article import Article
-from src.ui.article_display import ArticleDisplay
+from src.ui.article_display import show_original_article
 
 
-def test_show_enriched_prints_header_title_and_full_text(capsys):
+def test_show_original_article_outputs_title_and_all_paragraphs(capsys) -> None:
     article = Article(
-        title="Python",
-        paragraphs=["p1"],
-        enriched="Texto enriquecido completo.\n\nSegundo párrafo.",
+        title="Árbol",
+        paragraphs=["Primer párrafo.", "Segundo párrafo."],
     )
 
-    ArticleDisplay().show_enriched(article)
+    show_original_article(article)
 
-    output = capsys.readouterr().out
-    assert ArticleDisplay.ENRICHED_HEADER in output
-    assert "Tema: Python" in output
-    assert "Texto enriquecido completo.\n\nSegundo párrafo." in output
-
-
-def test_show_enriched_without_content_prints_clear_message(capsys):
-    article = Article(title="Python", paragraphs=["p1"])
-
-    ArticleDisplay().show_enriched(article)
-
-    output = capsys.readouterr().out
-    assert ArticleDisplay.EMPTY_ENRICHED_MESSAGE in output
-    assert ArticleDisplay.ENRICHED_HEADER not in output
+    assert capsys.readouterr().out == (
+        "Árbol\n\nPrimer párrafo.\nSegundo párrafo.\n"
+    )
