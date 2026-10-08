@@ -1,4 +1,4 @@
-"""Pruebas de integración del flujo de búsqueda en la terminal."""
+"""Pruebas de integración del flujo de búsqueda y enriquecimiento en la terminal."""
 
 from unittest.mock import Mock, patch
 
@@ -7,6 +7,9 @@ import requests
 
 from src.main import main
 from src.scraping.wikipedia_client import USER_AGENT, WIKIPEDIA_SEARCH_URL
+from src.ui.article_display import ENRICHED_HEADER
+
+ENRICHED_TEXT = "Texto enriquecido por IA."
 
 
 def make_response(html: str, status_code: int = 200) -> requests.Response:
@@ -28,8 +31,23 @@ SUCCESS_RESPONSE = make_response(
     """
 )
 
+EXPECTED_ARTICLE_OUTPUT = (
+    "Árbol\n\nPrimer párrafo.\nSegundo párrafo.\n"
+    f"{ENRICHED_HEADER}\n\n{ENRICHED_TEXT}\n"
+)
 
-def test_main_searches_and_displays_the_original_article(monkeypatch, capsys) -> None:
+
+@pytest.fixture(autouse=True)
+def fake_ai_client():
+    """Sustituye el cliente de Gemini por uno falso para no llamar a la API."""
+    with patch("src.main.AIClient") as ai_client_class:
+        ai_client_class.return_value.generate_text.return_value = ENRICHED_TEXT
+        yield ai_client_class.return_value
+
+
+def test_main_searches_and_displays_the_original_and_enriched_article(
+    monkeypatch, capsys, fake_ai_client
+) -> None:
     fake_input = Mock(return_value="  Árbol  ")
     monkeypatch.setattr("builtins.input", fake_input)
 
@@ -46,9 +64,8 @@ def test_main_searches_and_displays_the_original_article(monkeypatch, capsys) ->
         timeout=10.0,
     )
     fake_input.assert_called_once()
-    assert capsys.readouterr().out == (
-        "Árbol\n\nPrimer párrafo.\nSegundo párrafo.\n"
-    )
+    fake_ai_client.generate_text.assert_called_once()
+    assert capsys.readouterr().out == EXPECTED_ARTICLE_OUTPUT
 
 
 @pytest.mark.parametrize(
@@ -66,7 +83,7 @@ def test_main_searches_and_displays_the_original_article(monkeypatch, capsys) ->
     ids=["connection-error", "http-error"],
 )
 def test_main_reports_wikipedia_error_and_allows_another_search(
-    first_attempt, expected_error: str, monkeypatch, capsys
+    first_attempt, expected_error: str, monkeypatch, capsys, fake_ai_client
 ) -> None:
     answers = iter(["Árbol", "Música"])
     fake_input = Mock(side_effect=lambda prompt: next(answers))
@@ -80,7 +97,5 @@ def test_main_reports_wikipedia_error_and_allows_another_search(
 
     assert get.call_count == 2
     assert fake_input.call_count == 2
-    assert capsys.readouterr().out == (
-        f"{expected_error}\n"
-        "Árbol\n\nPrimer párrafo.\nSegundo párrafo.\n"
-    )
+    fake_ai_client.generate_text.assert_called_once()
+    assert capsys.readouterr().out == f"{expected_error}\n{EXPECTED_ARTICLE_OUTPUT}"
