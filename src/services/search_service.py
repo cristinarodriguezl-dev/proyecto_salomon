@@ -24,8 +24,10 @@ class WikipediaSearchService:
         """Busca un tema y devuelve el artículo con su título y párrafos."""
         response = self.wikipedia_client.fetch(topic)
         html = response.text
+        suggestion = self.wikipedia_parser.extract_suggestion(html)
 
         return Article(
             title=self.wikipedia_parser.extract_title(html),
             paragraphs=self.wikipedia_parser.extract_paragraphs(html),
+            suggestion=suggestion,
         )

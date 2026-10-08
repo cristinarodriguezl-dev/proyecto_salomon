@@ -10,3 +10,6 @@ def show_original_article(article: Article) -> None:
 
     for paragraph in article.paragraphs:
         print(paragraph)
+
+    if article.suggestion:
+        print(f"\nPerhaps you meant: {article.suggestion}")

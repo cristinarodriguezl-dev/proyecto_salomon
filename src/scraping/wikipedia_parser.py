@@ -51,3 +51,9 @@ class WikipediaParser:
                 break
 
         return paragraphs
+
+    def extract_suggestion(self, html: str) -> str:
+        """Return the 'did you mean' suggestion, or an empty string if missing."""
+        soup = BeautifulSoup(html, "html.parser")
+        suggestion = soup.select_one("#mw-search-DYM-suggestion")
+        return suggestion.get_text(" ", strip=True) if suggestion else ""
