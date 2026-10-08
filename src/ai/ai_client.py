@@ -1,4 +1,5 @@
 from google import genai
+from google.genai import types
 
 MODEL_NAME = "gemini-3.1-flash-lite"
 
@@ -9,6 +10,14 @@ class AIClient:
 
     def generate_text(self, prompt):
         """Send a prompt to Gemini and return its answer as text."""
-        response = self.client.models.generate_content(model=MODEL_NAME, contents=prompt)
+        response = self.client.models.generate_content(
+            model=MODEL_NAME,
+            contents=prompt,
+            config=types.GenerateContentConfig(
+                automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                    disable=True
+                )
+            ),
+        )
         return response.text
 

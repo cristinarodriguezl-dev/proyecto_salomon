@@ -18,7 +18,7 @@ def test_show_original_article_outputs_title_and_all_paragraphs(capsys) -> None:
     show_original_article(article)
 
     assert capsys.readouterr().out == (
-        "Árbol\n\nPrimer párrafo.\nSegundo párrafo.\n"
+        "Árbol\n\nPrimer párrafo.\n\nSegundo párrafo.\n"
     )
 
 

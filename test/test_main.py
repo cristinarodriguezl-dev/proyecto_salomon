@@ -32,7 +32,7 @@ SUCCESS_RESPONSE = make_response(
 )
 
 EXPECTED_ARTICLE_OUTPUT = (
-    "Árbol\n\nPrimer párrafo.\nSegundo párrafo.\n"
+    "Árbol\n\nPrimer párrafo.\n\nSegundo párrafo.\n"
     f"{ENRICHED_HEADER}\n\n{ENRICHED_TEXT}\n"
 )
 

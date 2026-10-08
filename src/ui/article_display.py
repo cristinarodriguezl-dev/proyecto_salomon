@@ -11,8 +11,7 @@ def show_original_article(article: Article) -> None:
     print(article.title)
     print()
 
-    for paragraph in article.paragraphs:
-        print(paragraph)
+    print("\n\n".join(article.paragraphs))
 
 
 def show_enriched_article(article: Article) -> None:
