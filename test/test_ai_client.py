@@ -1,5 +1,7 @@
 from unittest.mock import patch
 
+from google.genai import types
+
 from src.ai.ai_client import AIClient, MODEL_NAME
 
 
@@ -13,6 +15,12 @@ def test_generate_text_returns_gemini_answer(mock_client_class):
 
     mock_client_class.assert_called_once_with(api_key="fake-key")
     mock_client.models.generate_content.assert_called_once_with(
-        model=MODEL_NAME, contents="Say hello"
+        model=MODEL_NAME,
+        contents="Say hello",
+        config=types.GenerateContentConfig(
+            automatic_function_calling=types.AutomaticFunctionCallingConfig(
+                disable=True
+            )
+        ),
     )
     assert answer == "Hello!"
