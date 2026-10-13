@@ -157,6 +157,7 @@ def test_main_reports_missing_or_ambiguous_article_and_allows_another_search(
     assert capsys.readouterr().out == (
         'No se encontró un artículo válido para "tema inexistente". Prueba otra búsqueda.\n'
         'No se encontró un artículo válido para "tema sin contenido". Prueba otra búsqueda.\n'
-        'El tema "Mercurio" es ambiguo. Añade más detalles para concretar la búsqueda.\n'
+        'El tema "Mercurio" es ambiguo. Prueba con un nombre más específico '
+        'o añade una palabra que indique a qué te refieres.\n'
         + EXPECTED_ARTICLE_OUTPUT
     )

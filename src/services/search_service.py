@@ -33,7 +33,8 @@ class WikipediaSearchService:
         if self.wikipedia_parser.is_disambiguation_page(html):
             raise SearchError(
                 f'El tema "{topic}" es ambiguo. '
-                "Añade más detalles para concretar la búsqueda."
+                "Prueba con un nombre más específico o añade una palabra "
+                "que indique a qué te refieres."
             )
 
         try:
