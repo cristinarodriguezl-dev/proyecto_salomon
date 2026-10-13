@@ -4,6 +4,7 @@ import requests
 
 from src.ai.ai_client import AIClient
 from src.ai.content_enhancer import ContentEnhancer
+from src.exceptions import SearchError
 from src.services.search_service import WikipediaSearchService
 from src.settings import load_settings
 from src.ui.article_display import show_enriched_article, show_original_article
@@ -23,7 +24,11 @@ def main() -> None:
 
         try:
             article = search_service.search(topic)
-        except (requests.exceptions.RequestException, TimeoutError) as error:
+        except (
+            requests.exceptions.RequestException,
+            TimeoutError,
+            SearchError,
+        ) as error:
             print(error)
             continue
 

@@ -36,6 +36,36 @@ EXPECTED_ARTICLE_OUTPUT = (
     f"{ENRICHED_HEADER}\n\n{ENRICHED_TEXT}\n"
 )
 
+NO_ARTICLE_RESPONSE = make_response(
+    """
+    <h1 id="firstHeading">Resultados de búsqueda</h1>
+    <div id="mw-content-text"><div class="mw-parser-output"></div></div>
+    """
+)
+
+NO_TITLE_RESPONSE = make_response(
+    """
+    <html>
+      <head><title>Wikipedia</title></head>
+      <body><div id="mw-content-text"></div></body>
+    </html>
+    """
+)
+
+AMBIGUOUS_RESPONSE = make_response(
+    """
+    <h1 id="firstHeading">Mercurio</h1>
+    <div id="mw-content-text"><div class="mw-parser-output">
+      <p>Mercurio puede referirse a distintos temas.</p>
+    </div></div>
+    <div id="catlinks">
+      <a href="/wiki/Categoría:Wikipedia:Desambiguación">
+        Wikipedia:Desambiguación
+      </a>
+    </div>
+    """
+)
+
 
 @pytest.fixture(autouse=True)
 def fake_ai_client():
@@ -99,3 +129,34 @@ def test_main_reports_wikipedia_error_and_allows_another_search(
     assert fake_input.call_count == 2
     fake_ai_client.generate_text.assert_called_once()
     assert capsys.readouterr().out == f"{expected_error}\n{EXPECTED_ARTICLE_OUTPUT}"
+
+
+def test_main_reports_missing_or_ambiguous_article_and_allows_another_search(
+    monkeypatch, capsys, fake_ai_client
+) -> None:
+    answers = iter(
+        ["tema inexistente", "tema sin contenido", "Mercurio", "Árbol"]
+    )
+    fake_input = Mock(side_effect=lambda prompt: next(answers))
+    monkeypatch.setattr("builtins.input", fake_input)
+
+    with patch(
+        "src.scraping.wikipedia_client.requests.get",
+        side_effect=[
+            NO_TITLE_RESPONSE,
+            NO_ARTICLE_RESPONSE,
+            AMBIGUOUS_RESPONSE,
+            SUCCESS_RESPONSE,
+        ],
+    ) as get:
+        main()
+
+    assert get.call_count == 4
+    assert fake_input.call_count == 4
+    fake_ai_client.generate_text.assert_called_once()
+    assert capsys.readouterr().out == (
+        'No se encontró un artículo válido para "tema inexistente". Prueba otra búsqueda.\n'
+        'No se encontró un artículo válido para "tema sin contenido". Prueba otra búsqueda.\n'
+        'El tema "Mercurio" es ambiguo. Añade más detalles para concretar la búsqueda.\n'
+        + EXPECTED_ARTICLE_OUTPUT
+    )
