@@ -8,16 +8,18 @@ from src.exceptions import SearchError
 from src.services.search_service import WikipediaSearchService
 from src.settings import load_settings
 from src.ui.article_display import show_enriched_article, show_original_article
+from src.ui.search_continuation_prompt import SearchContinuationPrompt
 from src.ui.topic_input import request_topic
 
 
 def main() -> None:
-    """Busca un artículo, lo muestra y muestra su versión enriquecida con IA.
+    """Busca un artículo, lo muestra junto a su versión enriquecida y pregunta si repetir.
 
     Ante errores de red de Wikipedia, permite reintentar.
     """
     search_service = WikipediaSearchService()
     content_enhancer = ContentEnhancer(AIClient(load_settings().gemini_api_key))
+    continuation_prompt = SearchContinuationPrompt()
 
     while True:
         topic = request_topic()
@@ -35,7 +37,10 @@ def main() -> None:
         show_original_article(article)
         article = content_enhancer.enhance(article)
         show_enriched_article(article)
-        return
+
+        if not continuation_prompt.ask_search_again():
+            print("Programa finalizado.")
+            return
 
 
 if __name__ == "__main__":
