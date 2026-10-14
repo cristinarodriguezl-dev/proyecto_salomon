@@ -67,7 +67,7 @@ AMBIGUOUS_RESPONSE = make_response(
 )
 
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
 def fake_ai_client():
     """Sustituye el cliente de Gemini por uno falso para no llamar a la API."""
     with patch("src.main.AIClient") as ai_client_class:
@@ -80,6 +80,7 @@ def test_main_searches_and_displays_the_original_and_enriched_article(
 ) -> None:
     fake_input = Mock(return_value="  Árbol  ")
     monkeypatch.setattr("builtins.input", fake_input)
+    monkeypatch.setenv("WIKIPEDIA_TIMEOUT", "10")
 
     with patch(
         "src.scraping.wikipedia_client.requests.get",
