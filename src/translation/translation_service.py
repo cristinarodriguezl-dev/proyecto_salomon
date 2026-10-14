@@ -1,4 +1,4 @@
-"""Servicio de traducción de textos mediante la API de MyMemory."""
+"""Servicio de traducción mediante la API de MyMemory."""
 
 import html
 import time
@@ -18,21 +18,7 @@ class TranslationService:
         target_language: str,
         source_language: str = "es",
     ) -> str:
-        """Traduce un texto al idioma indicado.
-
-        Args:
-            content: Texto enriquecido que se desea traducir.
-            target_language: Código del idioma de destino.
-            source_language: Código del idioma de origen.
-
-        Returns:
-            Texto traducido.
-
-        Raises:
-            ValueError: Si los datos son incorrectos.
-            RuntimeError: Si MyMemory no puede traducir el texto.
-            requests.exceptions.RequestException: Si falla la conexión.
-        """
+        """Traduce el contenido al idioma solicitado."""
         if not content or not content.strip():
             raise ValueError("No hay contenido para traducir.")
 
@@ -40,7 +26,7 @@ class TranslationService:
         target_language = target_language.strip().lower()
 
         if not source_language or not target_language:
-            raise ValueError("Debes indicar los idiomas de origen y destino.")
+            raise ValueError("Debes indicar ambos idiomas.")
 
         if source_language == target_language:
             return content
@@ -50,15 +36,13 @@ class TranslationService:
 
         for index, chunk in enumerate(chunks):
             if index > 0:
-                time.sleep(0.25)
+                time.sleep(0.5)
 
             response = requests.get(
                 self.API_URL,
                 params={
                     "q": chunk,
-                    "langpair": (
-                        f"{source_language}|{target_language}"
-                    ),
+                    "langpair": f"{source_language}|{target_language}",
                 },
                 timeout=20,
             )
@@ -70,7 +54,7 @@ class TranslationService:
                     "responseDetails",
                     "Error desconocido de MyMemory.",
                 )
-                raise RuntimeError(f"MyMemory: {detail}")
+                raise RuntimeError(f"Error de MyMemory: {detail}")
 
             translated = data.get("responseData", {}).get(
                 "translatedText"
@@ -87,14 +71,11 @@ class TranslationService:
 
     def _split_text(self, content: str) -> list[str]:
         """Divide el texto en fragmentos sin cortar palabras."""
-        words = content.split()
         chunks = []
         current_chunk = ""
 
-        for word in words:
-            candidate = (
-                f"{current_chunk} {word}".strip()
-            )
+        for word in content.split():
+            candidate = f"{current_chunk} {word}".strip()
 
             if len(candidate) > self.MAX_CHUNK_SIZE:
                 if current_chunk:
