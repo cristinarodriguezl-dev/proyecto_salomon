@@ -4,12 +4,14 @@ import requests
 
 from src.ai.ai_client import AIClient
 from src.ai.content_enhancer import ContentEnhancer
-from src.exceptions import SearchError
+from src.exceptions import SearchError, EnrichmentError
 from src.services.search_service import WikipediaSearchService
 from src.settings import load_settings
 from src.ui.article_display import show_enriched_article, show_original_article
 from src.ui.search_continuation_prompt import SearchContinuationPrompt
 from src.ui.topic_input import request_topic
+
+ORIGINAL_KEPT_MESSAGE = "Se mantiene el artículo original de Wikipedia."
 
 
 def main() -> None:
@@ -35,8 +37,13 @@ def main() -> None:
             continue
 
         show_original_article(article)
-        article = content_enhancer.enhance(article)
-        show_enriched_article(article)
+        try:
+            article = content_enhancer.enhance(article)
+        except EnrichmentError as error:
+            print(error)
+            print(ORIGINAL_KEPT_MESSAGE)
+        else:
+            show_enriched_article(article)
 
         if not continuation_prompt.ask_search_again():
             print("Programa finalizado.")
