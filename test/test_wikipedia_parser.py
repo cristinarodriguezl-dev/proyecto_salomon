@@ -88,3 +88,25 @@ def test_extract_paragraphs_returns_all_when_fewer_than_five() -> None:
         "Primer párrafo disponible.",
         "Segundo párrafo disponible.",
     ]
+
+
+def test_is_disambiguation_page_detects_wikipedia_category() -> None:
+    html = """
+    <div id="catlinks">
+      <a href="/wiki/Categoría:Wikipedia:Desambiguación">
+        Wikipedia:Desambiguación
+      </a>
+    </div>
+    """
+
+    assert WikipediaParser().is_disambiguation_page(html) is True
+
+
+def test_is_disambiguation_page_returns_false_for_regular_article() -> None:
+    html = """
+    <div id="catlinks">
+      <a href="/wiki/Categoría:Botánica">Botánica</a>
+    </div>
+    """
+
+    assert WikipediaParser().is_disambiguation_page(html) is False
