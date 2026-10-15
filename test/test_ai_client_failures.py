@@ -34,8 +34,7 @@ GEMINI_FAILURES = [
     (make_client_error(429, "Quota exceeded."), RATE_LIMIT_MESSAGE),
     (make_server_error(503, "Service unavailable."), SERVICE_ERROR_MESSAGE),
 ]
-FAILURE_IDS = ["invalid-key-400", "invalid-key-403", "timeout", "rate-limit", "server"]
-
+FAILURE_IDS = ["invalid_key_400", "invalid_key_403", "timeout", "rate_limit", "server"]
 
 @pytest.mark.parametrize(
     ("gemini_error", "expected_message"), GEMINI_FAILURES, ids=FAILURE_IDS
