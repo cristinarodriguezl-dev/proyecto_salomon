@@ -8,6 +8,7 @@ from google.genai import errors
 
 from src.ai.ai_client import (
     INVALID_API_KEY_MESSAGE,
+    NETWORK_ERROR_MESSAGE,
     RATE_LIMIT_MESSAGE,
     SERVICE_ERROR_MESSAGE,
     TIMEOUT_MESSAGE,
@@ -31,10 +32,19 @@ GEMINI_FAILURES = [
     ),
     (make_client_error(403, "Permission denied."), INVALID_API_KEY_MESSAGE),
     (httpx.ReadTimeout("timed out"), TIMEOUT_MESSAGE),
+    (httpx.ConnectError("no connection"), NETWORK_ERROR_MESSAGE),
     (make_client_error(429, "Quota exceeded."), RATE_LIMIT_MESSAGE),
     (make_server_error(503, "Service unavailable."), SERVICE_ERROR_MESSAGE),
 ]
-FAILURE_IDS = ["invalid_key_400", "invalid_key_403", "timeout", "rate_limit", "server"]
+FAILURE_IDS = [
+    "invalid_key_400",
+    "invalid_key_403",
+    "timeout",
+    "network",
+    "rate_limit",
+    "server",
+]
+
 
 @pytest.mark.parametrize(
     ("gemini_error", "expected_message"), GEMINI_FAILURES, ids=FAILURE_IDS
