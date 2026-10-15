@@ -12,13 +12,13 @@ INVALID_API_KEY_MESSAGE = (
     "La clave de Gemini no es válida. Revisa GEMINI_API_KEY en tu archivo .env."
 )
 TIMEOUT_MESSAGE = "Gemini tardó demasiado en responder (tiempo de espera agotado)."
+NETWORK_ERROR_MESSAGE = (
+    "No se pudo conectar con Gemini. Revisa tu conexión a internet."
+)
 RATE_LIMIT_MESSAGE = (
     "Se alcanzó el límite de uso de Gemini. Espera un poco antes de volver a intentarlo."
 )
 SERVICE_ERROR_MESSAGE = "El servicio de Gemini no está disponible en este momento."
-NETWORK_ERROR_MESSAGE = (
-    "No se pudo conectar con Gemini. Revisa tu conexión a internet."
-)
 
 
 def _message_for_api_error(error):
@@ -53,9 +53,10 @@ class AIClient:
                     )
                 ),
             )
-            except httpx.TimeoutException as error:
+        except httpx.TimeoutException as error:
             raise EnrichmentError(TIMEOUT_MESSAGE) from error
         except httpx.TransportError as error:
             raise EnrichmentError(NETWORK_ERROR_MESSAGE) from error
         except errors.APIError as error:
             raise EnrichmentError(_message_for_api_error(error)) from error
+        return response.text
