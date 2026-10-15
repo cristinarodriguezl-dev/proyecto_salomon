@@ -12,3 +12,4 @@ Feature: Explicar los fallos de Gemini y continuar con el contenido original
       | el tiempo de espera agotado  |
       | el límite de uso             |
       | un fallo del servicio        |
+      | un fallo de conexión         |
