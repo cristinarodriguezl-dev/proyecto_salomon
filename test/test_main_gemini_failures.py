@@ -7,6 +7,7 @@ import requests
 
 from src.ai.ai_client import (
     INVALID_API_KEY_MESSAGE,
+    NETWORK_ERROR_MESSAGE,
     RATE_LIMIT_MESSAGE,
     SERVICE_ERROR_MESSAGE,
     TIMEOUT_MESSAGE,
@@ -31,6 +32,7 @@ ARTICLE_RESPONSE._content = (
     [
         INVALID_API_KEY_MESSAGE,
         TIMEOUT_MESSAGE,
+        NETWORK_ERROR_MESSAGE,
         RATE_LIMIT_MESSAGE,
         SERVICE_ERROR_MESSAGE,
     ],
