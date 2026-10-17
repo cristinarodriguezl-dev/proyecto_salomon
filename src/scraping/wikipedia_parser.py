@@ -7,6 +7,7 @@ ARTICLE_CONTENT_SELECTOR = "#mw-content-text .mw-parser-output"
 EXCLUDED_ANCESTOR_TAGS = ["aside", "footer", "nav", "table"]
 EXCLUDED_CONTAINER_CLASSES = ["ambox", "hatnote", "infobox", "metadata", "navbox"]
 MAX_PARAGRAPHS = 5
+DISAMBIGUATION_CATEGORY_TERM = "desambiguación"
 
 
 class WikipediaParser:
@@ -51,3 +52,14 @@ class WikipediaParser:
                 break
 
         return paragraphs
+
+    def is_disambiguation_page(self, html: str) -> bool:
+        """Detecta si Wikipedia clasifica la página como desambiguación."""
+        soup = BeautifulSoup(html, "html.parser")
+        categories = soup.select("#catlinks a")
+
+        return any(
+            DISAMBIGUATION_CATEGORY_TERM
+            in category.get_text(" ", strip=True).casefold()
+            for category in categories
+        )
