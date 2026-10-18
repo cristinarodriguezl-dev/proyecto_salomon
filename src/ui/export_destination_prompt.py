@@ -3,7 +3,6 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-
 VALID_FORMATS = {"txt", "pdf"}
 INVALID_NAME_CHARACTERS = set('<>:"/\\|?*')
 RESERVED_WINDOWS_NAMES = {
@@ -23,21 +22,18 @@ INVALID_NAME_MESSAGE = (
 WRONG_EXTENSION_MESSAGE = (
     "La extensión del nombre debe coincidir con el formato elegido."
 )
-
+OVERWRITE_PROMPT = "El archivo '{path}' ya existe. ¿Quieres sobrescribirlo? (s/n): "
+INVALID_ANSWER_MESSAGE = "Respuesta no válida. Escribe s o n."
+YES_ANSWERS = {"s", "si", "sí"}
+NO_ANSWERS = {"n", "no"}
 
 @dataclass(frozen=True)
 class ExportDestination:
-    """The selected format and relative path for a future export."""
-
     file_format: str
     path: Path
 
-
 class ExportDestinationPrompt:
-    """Ask again until the format and filename form a valid destination."""
-
     def ask(self) -> ExportDestination:
-        """Return a valid choice without creating or overwriting a file."""
         file_format = self._ask_format()
 
         while True:
@@ -49,7 +45,22 @@ class ExportDestinationPrompt:
                 print(error)
                 continue
 
+            if path.exists() and not self._confirm_overwrite(path):
+                continue
+
             return ExportDestination(file_format=file_format, path=path)
+
+    @staticmethod
+    def _confirm_overwrite(path: Path) -> bool:
+        while True:
+            answer = input(OVERWRITE_PROMPT.format(path=path)).strip().casefold()
+
+            if answer in YES_ANSWERS:
+                return True
+            if answer in NO_ANSWERS:
+                return False
+
+            print(INVALID_ANSWER_MESSAGE)
 
     @staticmethod
     def _ask_format() -> str:
