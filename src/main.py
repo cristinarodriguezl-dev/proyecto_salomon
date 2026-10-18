@@ -1,31 +1,41 @@
-"""Coordina la búsqueda, la presentación y la exportación del artículo."""
+"""Coordina la búsqueda, traducción, presentación y exportación del artículo."""
 
 import requests
 
 from src.ai.ai_client import AIClient
 from src.ai.content_enhancer import ContentEnhancer
-from src.exceptions import EnrichmentError, ExportError, SearchError
+from src.exceptions import EnrichmentError, ExportError, SearchError, TranslationError
 from src.export.export_service import ExportService
 from src.services.search_service import WikipediaSearchService
 from src.settings import load_settings
-from src.ui.article_display import show_enriched_article, show_original_article
+from src.translation.article_translator import ArticleTranslator
+from src.translation.translation_service import TranslationService
+from src.ui.article_display import (
+    show_enriched_article,
+    show_original_article,
+    show_translated_article,
+)
 from src.ui.export_confirmation_prompt import ExportConfirmationPrompt
 from src.ui.export_destination_prompt import ExportDestinationPrompt
 from src.ui.export_version_prompt import ExportVersionPrompt
 from src.ui.search_continuation_prompt import SearchContinuationPrompt
 from src.ui.topic_input import request_topic
+from src.ui.translation_language_prompt import TranslationLanguagePrompt
 
 ORIGINAL_KEPT_MESSAGE = "Se mantiene el artículo original de Wikipedia."
 
 
 def main() -> None:
-    """Busca, muestra y ofrece guardar el artículo antes de repetir o salir.
+    """Busca, muestra, traduce y ofrece guardar antes de repetir o salir.
 
     Ante errores de red de Wikipedia, permite reintentar.
     """
     search_service = WikipediaSearchService()
     content_enhancer = ContentEnhancer(AIClient(load_settings().gemini_api_key))
     continuation_prompt = SearchContinuationPrompt()
+    translation_service = TranslationService()
+    translation_language_prompt = TranslationLanguagePrompt(translation_service)
+    article_translator = ArticleTranslator(translation_service)
     export_confirmation_prompt = ExportConfirmationPrompt()
     export_version_prompt = ExportVersionPrompt()
     export_destination_prompt = ExportDestinationPrompt()
@@ -52,6 +62,21 @@ def main() -> None:
             print(ORIGINAL_KEPT_MESSAGE)
         else:
             show_enriched_article(article)
+
+        while True:
+            target_language = translation_language_prompt.ask()
+            if target_language is None:
+                break
+
+            try:
+                article = article_translator.translate(article, target_language)
+            except (TranslationError, ValueError) as error:
+                print(error)
+                continue
+
+            language_name = translation_service.get_supported_languages()[target_language]
+            show_translated_article(article, language_name)
+            break
 
         if export_confirmation_prompt.ask():
             content = export_version_prompt.ask(article)
