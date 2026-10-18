@@ -24,8 +24,9 @@ def flow_dependencies():
         "src.main.AIClient"
     ) as ai_class, patch("src.main.TranslationService") as translation_class, patch(
         "src.main.load_settings"
-    ) as settings:
+    ) as settings, patch("src.main.SummaryConfirmationPrompt") as summary_prompt_class:
         settings.return_value.gemini_api_key = "fake-key"
+        summary_prompt_class.return_value.ask.return_value = False
         search_class.return_value.search.return_value = article
         ai_class.return_value.generate_text.return_value = (
             "Primero ampliado.\n\nSegundo ampliado."
