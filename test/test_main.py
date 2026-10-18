@@ -244,13 +244,35 @@ def test_main_reports_unavailable_pdf_and_still_exits(
     assert output.endswith(EXIT_OUTPUT)
 
 
-def test_main_does_not_replace_an_existing_document(
+def test_main_replaces_an_existing_document_when_overwrite_is_confirmed(
     monkeypatch, tmp_path, capsys, fake_ai_client
 ) -> None:
     monkeypatch.chdir(tmp_path)
     existing = tmp_path / "articulo.txt"
     existing.write_text("Versión anterior", encoding="utf-8")
-    answers = iter(["Árbol", "s", "1", "txt", "articulo", "2"])
+    answers = iter(["Árbol", "s", "1", "txt", "articulo", "s", "2"])
+    monkeypatch.setattr("builtins.input", lambda prompt: next(answers))
+
+    with patch(
+        "src.scraping.wikipedia_client.requests.get", return_value=SUCCESS_RESPONSE
+    ):
+        main()
+
+    saved = existing.read_text(encoding="utf-8")
+    assert "Versión anterior" not in saved
+    assert saved.startswith("Árbol\n=====")
+    output = capsys.readouterr().out
+    assert "Archivo guardado: articulo.txt" in output
+    assert output.endswith(EXIT_OUTPUT)
+
+
+def test_main_keeps_an_existing_document_when_overwrite_is_rejected(
+    monkeypatch, tmp_path, capsys, fake_ai_client
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    existing = tmp_path / "articulo.txt"
+    existing.write_text("Versión anterior", encoding="utf-8")
+    answers = iter(["Árbol", "s", "1", "txt", "articulo", "n", "otro", "2"])
     monkeypatch.setattr("builtins.input", lambda prompt: next(answers))
 
     with patch(
@@ -259,7 +281,10 @@ def test_main_does_not_replace_an_existing_document(
         main()
 
     assert existing.read_text(encoding="utf-8") == "Versión anterior"
-    assert "El archivo 'articulo.txt' ya existe" in capsys.readouterr().out
+    assert (tmp_path / "otro.txt").exists()
+    output = capsys.readouterr().out
+    assert "Archivo guardado: otro.txt" in output
+    assert output.endswith(EXIT_OUTPUT)
 
 
 def test_main_allows_another_search_after_an_export_error(
