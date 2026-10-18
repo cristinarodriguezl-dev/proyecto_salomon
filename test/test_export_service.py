@@ -4,12 +4,28 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+from pypdf import PdfReader
 
 from src.exceptions import ExportError
 from src.export.export_service import ExportService
 from src.export.exporter import Exporter
 from src.export.txt_exporter import TxtExporter
 from src.ui.export_destination_prompt import ExportDestination
+
+
+def test_default_service_exports_pdf_with_title_and_selected_content(
+    tmp_path: Path,
+) -> None:
+    destination = ExportDestination("pdf", tmp_path / "articulo.pdf")
+
+    ExportService().export("Árbol", "Contenido elegido para PDF.", destination)
+
+    assert destination.path.read_bytes().startswith(b"%PDF")
+    reader = PdfReader(destination.path)
+    assert len(reader.pages) == 1
+    pdf_text = reader.pages[0].extract_text()
+    assert "Árbol" in pdf_text
+    assert "Contenido elegido para PDF." in pdf_text
 
 
 def test_service_dispatches_pdf_to_a_registered_exporter(tmp_path: Path) -> None:
