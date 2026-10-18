@@ -96,5 +96,14 @@ def test_search_enrich_translate_export_txt_and_exit_without_real_apis(
     exported = (tmp_path / "article.txt").read_text(encoding="utf-8")
     assert exported.startswith("Árbol\n")
     assert "First enriched.\n\nSecond enriched." in exported
+    assert ENRICHED not in exported
     assert "Primero ampliado." not in exported
-    assert "Primer original." not in exported
+    assert "Segundo ampliado." not in exported
+    for paragraph in (
+        "Primer original.",
+        "Segundo original.",
+        "Tercer original.",
+        "Cuarto original.",
+        "Quinto original.",
+    ):
+        assert paragraph not in exported
