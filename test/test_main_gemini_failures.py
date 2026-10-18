@@ -47,8 +47,11 @@ def test_main_keeps_original_article_when_gemini_fails(
 
     with patch("src.main.AIClient") as ai_client_class, patch(
         "src.scraping.wikipedia_client.requests.get", return_value=ARTICLE_RESPONSE
-    ), patch("src.main.TranslationLanguagePrompt") as language_prompt_class:
+    ), patch("src.main.TranslationLanguagePrompt") as language_prompt_class, patch(
+        "src.main.SummaryConfirmationPrompt"
+    ) as summary_prompt_class:
         language_prompt_class.return_value.ask.return_value = None
+        summary_prompt_class.return_value.ask.return_value = False
         ai_client_class.return_value.generate_text.side_effect = EnrichmentError(
             expected_message
         )
@@ -70,8 +73,11 @@ def test_main_can_export_original_after_gemini_failure(
 
     with patch("src.main.AIClient") as ai_client_class, patch(
         "src.scraping.wikipedia_client.requests.get", return_value=ARTICLE_RESPONSE
-    ), patch("src.main.TranslationLanguagePrompt") as language_prompt_class:
+    ), patch("src.main.TranslationLanguagePrompt") as language_prompt_class, patch(
+        "src.main.SummaryConfirmationPrompt"
+    ) as summary_prompt_class:
         language_prompt_class.return_value.ask.return_value = None
+        summary_prompt_class.return_value.ask.return_value = False
         ai_client_class.return_value.generate_text.side_effect = EnrichmentError(
             SERVICE_ERROR_MESSAGE
         )
