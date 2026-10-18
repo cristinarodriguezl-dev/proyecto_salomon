@@ -17,6 +17,14 @@ SUPPORTED_LANGUAGES = {
     "pt": "Portugués",
 }
 
+CONNECTION_ERROR_MESSAGE = (
+    "No se pudo conectar con MyMemory (sin conexión o tiempo de espera agotado). "
+    "Revisa tu conexión a internet."
+)
+SERVICE_ERROR_MESSAGE = (
+    "El servicio de traducción MyMemory no está disponible en este momento."
+)
+
 
 class TranslationService:
     """Traduce un texto o párrafo por llamada a MyMemory."""
@@ -58,10 +66,13 @@ class TranslationService:
                 )
                 response.raise_for_status()
                 data = response.json()
+            except (
+                requests.exceptions.ConnectionError,
+                requests.exceptions.Timeout,
+            ) as error:
+                raise TranslationError(CONNECTION_ERROR_MESSAGE) from error
             except requests.exceptions.RequestException as error:
-                raise TranslationError(
-                    f"No se pudo consultar MyMemory: {error}"
-                ) from error
+                raise TranslationError(SERVICE_ERROR_MESSAGE) from error
             except (TypeError, ValueError, AttributeError) as error:
                 raise TranslationError(
                     "MyMemory devolvió una respuesta no válida."
