@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 
 import pytest
 import requests
+from pypdf import PdfReader
 
 from src.main import main
 from src.scraping.wikipedia_client import USER_AGENT, WIKIPEDIA_SEARCH_URL
@@ -229,11 +230,11 @@ def test_main_exports_selected_enriched_text_and_can_search_again(
     assert "Archivo guardado: articulo.txt" in capsys.readouterr().out
 
 
-def test_main_reports_unavailable_pdf_and_still_exits(
+def test_main_exports_selected_enriched_text_as_pdf_and_still_exits(
     monkeypatch, tmp_path, capsys, fake_ai_client
 ) -> None:
     monkeypatch.chdir(tmp_path)
-    answers = iter(["Árbol", "s", "1", "pdf", "articulo", "2"])
+    answers = iter(["Árbol", "s", "2", "pdf", "articulo", "2"])
     monkeypatch.setattr("builtins.input", lambda prompt: next(answers))
 
     with patch(
@@ -241,9 +242,14 @@ def test_main_reports_unavailable_pdf_and_still_exits(
     ):
         main()
 
-    assert not (tmp_path / "articulo.pdf").exists()
+    destination = tmp_path / "articulo.pdf"
+    assert destination.read_bytes().startswith(b"%PDF")
+    pdf_text = PdfReader(destination).pages[0].extract_text()
+    assert "Árbol" in pdf_text
+    assert ENRICHED_TEXT in pdf_text
+    assert "Primer párrafo." not in pdf_text
     output = capsys.readouterr().out
-    assert "La exportación a PDF aún no está disponible." in output
+    assert "Archivo guardado: articulo.pdf" in output
     assert output.endswith(EXIT_OUTPUT)
 
 
