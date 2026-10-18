@@ -82,7 +82,7 @@ def fake_ai_client():
 def test_main_searches_and_displays_the_original_and_enriched_article(
         monkeypatch, capsys, fake_ai_client
 ) -> None:
-    answers = iter(["  Árbol  ", "2"])
+    answers = iter(["  Árbol  ", "n", "2"])
     fake_input = Mock(side_effect=lambda prompt: next(answers))
     monkeypatch.setattr("builtins.input", fake_input)
     monkeypatch.setenv("WIKIPEDIA_TIMEOUT", "10")
@@ -99,7 +99,7 @@ def test_main_searches_and_displays_the_original_and_enriched_article(
         headers={"User-Agent": USER_AGENT},
         timeout=10.0,
     )
-    assert fake_input.call_count == 2
+    assert fake_input.call_count == 3
     fake_ai_client.generate_text.assert_called_once()
     assert capsys.readouterr().out == (
             ARTICLE_OUTPUT + CONTINUATION_MENU_OUTPUT + EXIT_OUTPUT
@@ -123,7 +123,7 @@ def test_main_searches_and_displays_the_original_and_enriched_article(
 def test_main_reports_wikipedia_error_and_allows_another_search(
         first_attempt, expected_error: str, monkeypatch, capsys, fake_ai_client
 ) -> None:
-    answers = iter(["Árbol", "Música", "2"])
+    answers = iter(["Árbol", "Música", "n", "2"])
     fake_input = Mock(side_effect=lambda prompt: next(answers))
     monkeypatch.setattr("builtins.input", fake_input)
 
@@ -134,7 +134,7 @@ def test_main_reports_wikipedia_error_and_allows_another_search(
         main()
 
     assert get.call_count == 2
-    assert fake_input.call_count == 3
+    assert fake_input.call_count == 4
     fake_ai_client.generate_text.assert_called_once()
     assert capsys.readouterr().out == (
             f"{expected_error}\n"
@@ -147,7 +147,7 @@ def test_main_reports_wikipedia_error_and_allows_another_search(
 def test_main_allows_another_search_and_then_exits(
         monkeypatch, capsys, fake_ai_client
 ) -> None:
-    answers = iter(["Árbol", "1", "Música", "2"])
+    answers = iter(["Árbol", "n", "1", "Música", "n", "2"])
     fake_input = Mock(side_effect=lambda prompt: next(answers))
     monkeypatch.setattr("builtins.input", fake_input)
 
@@ -158,7 +158,7 @@ def test_main_allows_another_search_and_then_exits(
         main()
 
     assert get.call_count == 2
-    assert fake_input.call_count == 4
+    assert fake_input.call_count == 6
     assert fake_ai_client.generate_text.call_count == 2
     assert capsys.readouterr().out == (
             ARTICLE_OUTPUT
@@ -173,7 +173,7 @@ def test_main_reports_missing_or_ambiguous_article_and_allows_another_search(
     monkeypatch, capsys, fake_ai_client
 ) -> None:
     answers = iter(
-        ["tema inexistente", "tema sin contenido", "Mercurio", "Árbol", "2"]
+        ["tema inexistente", "tema sin contenido", "Mercurio", "Árbol", "n", "2"]
     )
     fake_input = Mock(side_effect=lambda prompt: next(answers))
     monkeypatch.setattr("builtins.input", fake_input)
@@ -190,7 +190,7 @@ def test_main_reports_missing_or_ambiguous_article_and_allows_another_search(
         main()
 
     assert get.call_count == 4
-    assert fake_input.call_count == 5
+    assert fake_input.call_count == 6
     fake_ai_client.generate_text.assert_called_once()
     assert capsys.readouterr().out == (
         'No se encontró un artículo válido para "tema inexistente". Prueba otra búsqueda.\n'
@@ -201,3 +201,107 @@ def test_main_reports_missing_or_ambiguous_article_and_allows_another_search(
         + CONTINUATION_MENU_OUTPUT
         + EXIT_OUTPUT
     )
+
+
+def test_main_exports_selected_enriched_text_and_can_search_again(
+    monkeypatch, tmp_path, capsys, fake_ai_client
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    answers = iter(["Árbol", "s", "2", "txt", "articulo", "1", "Música", "n", "2"])
+    monkeypatch.setattr("builtins.input", lambda prompt: next(answers))
+
+    with patch(
+        "src.scraping.wikipedia_client.requests.get",
+        side_effect=[SUCCESS_RESPONSE, SUCCESS_RESPONSE],
+    ) as get:
+        main()
+
+    assert get.call_count == 2
+    assert (tmp_path / "articulo.txt").read_text(encoding="utf-8") == (
+        "Árbol\n=====\n\nTexto enriquecido por IA.\n"
+    )
+    assert "Archivo guardado: articulo.txt" in capsys.readouterr().out
+
+
+def test_main_reports_unavailable_pdf_and_still_exits(
+    monkeypatch, tmp_path, capsys, fake_ai_client
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    answers = iter(["Árbol", "s", "1", "pdf", "articulo", "2"])
+    monkeypatch.setattr("builtins.input", lambda prompt: next(answers))
+
+    with patch(
+        "src.scraping.wikipedia_client.requests.get", return_value=SUCCESS_RESPONSE
+    ):
+        main()
+
+    assert not (tmp_path / "articulo.pdf").exists()
+    output = capsys.readouterr().out
+    assert "La exportación a PDF aún no está disponible." in output
+    assert output.endswith(EXIT_OUTPUT)
+
+
+def test_main_replaces_an_existing_document_when_overwrite_is_confirmed(
+    monkeypatch, tmp_path, capsys, fake_ai_client
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    existing = tmp_path / "articulo.txt"
+    existing.write_text("Versión anterior", encoding="utf-8")
+    answers = iter(["Árbol", "s", "1", "txt", "articulo", "s", "2"])
+    monkeypatch.setattr("builtins.input", lambda prompt: next(answers))
+
+    with patch(
+        "src.scraping.wikipedia_client.requests.get", return_value=SUCCESS_RESPONSE
+    ):
+        main()
+
+    saved = existing.read_text(encoding="utf-8")
+    assert "Versión anterior" not in saved
+    assert saved.startswith("Árbol\n=====")
+    output = capsys.readouterr().out
+    assert "Archivo guardado: articulo.txt" in output
+    assert output.endswith(EXIT_OUTPUT)
+
+
+def test_main_keeps_an_existing_document_when_overwrite_is_rejected(
+    monkeypatch, tmp_path, capsys, fake_ai_client
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    existing = tmp_path / "articulo.txt"
+    existing.write_text("Versión anterior", encoding="utf-8")
+    answers = iter(["Árbol", "s", "1", "txt", "articulo", "n", "otro", "2"])
+    monkeypatch.setattr("builtins.input", lambda prompt: next(answers))
+
+    with patch(
+        "src.scraping.wikipedia_client.requests.get", return_value=SUCCESS_RESPONSE
+    ):
+        main()
+
+    assert existing.read_text(encoding="utf-8") == "Versión anterior"
+    assert (tmp_path / "otro.txt").exists()
+    output = capsys.readouterr().out
+    assert "Archivo guardado: otro.txt" in output
+    assert output.endswith(EXIT_OUTPUT)
+
+
+def test_main_allows_another_search_after_an_export_error(
+    monkeypatch, tmp_path, capsys, fake_ai_client
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    answers = iter(["Árbol", "s", "1", "txt", "articulo", "1", "Música", "n", "2"])
+    monkeypatch.setattr("builtins.input", lambda prompt: next(answers))
+
+    with patch(
+        "src.scraping.wikipedia_client.requests.get",
+        side_effect=[SUCCESS_RESPONSE, SUCCESS_RESPONSE],
+    ) as get, patch(
+        "src.export.txt_exporter.TxtExporter.export",
+        side_effect=PermissionError("sin permiso"),
+    ):
+        main()
+
+    assert get.call_count == 2
+    assert not (tmp_path / "articulo.txt").exists()
+    output = capsys.readouterr().out
+    assert "No se pudo guardar 'articulo.txt': sin permiso" in output
+    assert output.endswith(EXIT_OUTPUT)
