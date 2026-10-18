@@ -40,7 +40,7 @@ ARTICLE_RESPONSE._content = (
 def test_main_keeps_original_article_when_gemini_fails(
     expected_message, monkeypatch, capsys
 ):
-    answers = iter(["Árbol", "2"])
+    answers = iter(["Árbol", "n", "2"])
     monkeypatch.setattr(
         "builtins.input", Mock(side_effect=lambda prompt: next(answers))
     )
@@ -56,5 +56,30 @@ def test_main_keeps_original_article_when_gemini_fails(
     output = capsys.readouterr().out
     assert "Árbol\n\nPrimer párrafo.\n" in output
     assert f"{expected_message}\n{ORIGINAL_KEPT_MESSAGE}\n" in output
+    assert ENRICHED_HEADER not in output
+    assert output.endswith("Programa finalizado.\n")
+
+
+def test_main_can_export_original_after_gemini_failure(
+    monkeypatch, tmp_path, capsys
+):
+    monkeypatch.chdir(tmp_path)
+    answers = iter(["Árbol", "s", "1", "txt", "articulo", "2"])
+    monkeypatch.setattr("builtins.input", lambda prompt: next(answers))
+
+    with patch("src.main.AIClient") as ai_client_class, patch(
+        "src.scraping.wikipedia_client.requests.get", return_value=ARTICLE_RESPONSE
+    ):
+        ai_client_class.return_value.generate_text.side_effect = EnrichmentError(
+            SERVICE_ERROR_MESSAGE
+        )
+        main()
+
+    assert (tmp_path / "articulo.txt").read_text(encoding="utf-8") == (
+        "Árbol\n=====\n\nPrimer párrafo.\n"
+    )
+    output = capsys.readouterr().out
+    assert f"{SERVICE_ERROR_MESSAGE}\n{ORIGINAL_KEPT_MESSAGE}\n" in output
+    assert "Archivo guardado: articulo.txt" in output
     assert ENRICHED_HEADER not in output
     assert output.endswith("Programa finalizado.\n")
