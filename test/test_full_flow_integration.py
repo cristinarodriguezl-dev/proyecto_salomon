@@ -43,7 +43,7 @@ def test_search_enrich_translate_export_txt_and_exit_without_real_apis(
     monkeypatch, tmp_path, capsys
 ) -> None:
     """Comprueba el flujo real simulando solo las respuestas externas."""
-    answers = iter(["Árbol", "en", "s", "3", "txt", "article", "2"])
+    answers = iter(["Árbol", "n", "en", "s", "3", "txt", "article", "2"])
     monkeypatch.setattr("builtins.input", lambda _prompt: next(answers))
     monkeypatch.chdir(tmp_path)
 
