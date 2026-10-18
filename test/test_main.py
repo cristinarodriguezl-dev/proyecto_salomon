@@ -74,8 +74,11 @@ AMBIGUOUS_RESPONSE = make_response(
 @pytest.fixture
 def fake_ai_client():
     """Sustituye el cliente de Gemini por uno falso para no llamar a la API."""
-    with patch("src.main.AIClient") as ai_client_class:
+    with patch("src.main.AIClient") as ai_client_class, patch(
+        "src.main.TranslationLanguagePrompt"
+    ) as language_prompt_class:
         ai_client_class.return_value.generate_text.return_value = ENRICHED_TEXT
+        language_prompt_class.return_value.ask.return_value = None
         yield ai_client_class.return_value
 
 
