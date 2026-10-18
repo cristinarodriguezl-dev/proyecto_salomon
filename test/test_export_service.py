@@ -8,6 +8,7 @@ import pytest
 from src.exceptions import ExportError
 from src.export.export_service import ExportService
 from src.export.exporter import Exporter
+from src.export.txt_exporter import TxtExporter
 from src.ui.export_destination_prompt import ExportDestination
 
 
@@ -31,3 +32,17 @@ def test_service_reports_write_errors_as_export_errors(tmp_path: Path) -> None:
 
     with pytest.raises(ExportError, match="No se pudo guardar.*sin permiso"):
         service.export("Árbol", "Contenido", destination)
+
+
+def test_service_replaces_an_existing_file_with_the_new_content(
+    tmp_path: Path,
+) -> None:
+    destination = ExportDestination("txt", tmp_path / "articulo.txt")
+    destination.path.write_text("Versión anterior", encoding="utf-8")
+    service = ExportService({"txt": TxtExporter()})
+
+    service.export("Árbol", "Contenido nuevo", destination)
+
+    saved = destination.path.read_text(encoding="utf-8")
+    assert "Versión anterior" not in saved
+    assert "Contenido nuevo" in saved

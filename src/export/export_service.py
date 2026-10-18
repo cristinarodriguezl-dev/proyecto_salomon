@@ -15,13 +15,9 @@ class ExportService:
         self.exporters = dict(exporters) if exporters is not None else {"txt": TxtExporter()}
 
     def export(self, title: str, content: str, destination: ExportDestination) -> None:
-        """Save a new document; report unsupported formats and file failures clearly."""
         exporter = self.exporters.get(destination.file_format)
         if exporter is None:
             raise ExportError(f"La exportación a {destination.file_format.upper()} aún no está disponible.")
-
-        if destination.path.exists():
-            raise ExportError(f"El archivo '{destination.path}' ya existe. Elige otro nombre.")
 
         try:
             exporter.export(title, content, destination.path)

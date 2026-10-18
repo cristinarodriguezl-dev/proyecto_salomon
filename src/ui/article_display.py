@@ -4,6 +4,8 @@ from src.models.article import Article
 
 ENRICHED_HEADER = "CONTENIDO ENRIQUECIDO (IA)"
 EMPTY_ENRICHED_MESSAGE = "No hay contenido enriquecido para mostrar."
+TRANSLATED_HEADER = "CONTENIDO TRADUCIDO"
+EMPTY_TRANSLATED_MESSAGE = "No hay contenido traducido para mostrar."
 
 
 def show_original_article(article: Article) -> None:
@@ -24,3 +26,14 @@ def show_enriched_article(article: Article) -> None:
     print(ENRICHED_HEADER)
     print()
     print(article.enriched)
+
+
+def show_translated_article(article: Article, target_language: str) -> None:
+    """Muestra la versión traducida guardada e identifica su idioma."""
+    if not article.translated.strip():
+        print(EMPTY_TRANSLATED_MESSAGE)
+        return
+
+    print(f"{TRANSLATED_HEADER} ({target_language})")
+    print()
+    print(article.translated)
