@@ -54,7 +54,7 @@ def test_main_keeps_original_article_when_gemini_fails(
         main()
 
     output = capsys.readouterr().out
-    assert "Árbol\n\nPrimer párrafo.\n" in output
+    assert "Árbol\n=====\n\nPrimer párrafo.\n" in output
     assert f"{expected_message}\n{ORIGINAL_KEPT_MESSAGE}\n" in output
     assert ENRICHED_HEADER not in output
     assert output.endswith("Programa finalizado.\n")

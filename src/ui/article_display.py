@@ -9,6 +9,7 @@ EMPTY_ENRICHED_MESSAGE = "No hay contenido enriquecido para mostrar."
 def show_original_article(article: Article) -> None:
     """Muestra el título y los párrafos originales de un artículo."""
     print(article.title)
+    print("=" * len(article.title))
     print()
 
     print("\n\n".join(article.paragraphs))

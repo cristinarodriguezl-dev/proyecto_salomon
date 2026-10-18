@@ -32,7 +32,7 @@ SUCCESS_RESPONSE = make_response(
 )
 
 ARTICLE_OUTPUT = (
-    "Árbol\n\nPrimer párrafo.\n\nSegundo párrafo.\n"
+    "Árbol\n=====\n\nPrimer párrafo.\n\nSegundo párrafo.\n"
     f"{ENRICHED_HEADER}\n\n{ENRICHED_TEXT}\n"
 )
 CONTINUATION_MENU_OUTPUT = (
