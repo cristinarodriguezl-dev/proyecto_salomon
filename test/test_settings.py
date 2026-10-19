@@ -2,7 +2,7 @@ import dataclasses
 
 import pytest
 
-from src.settings import load_settings
+from src.settings import INVALID_TIMEOUT_MESSAGE, load_settings
 
 
 def test_load_settings_reads_values_from_environment(monkeypatch):
@@ -34,8 +34,9 @@ def test_settings_cannot_be_modified_after_creation(monkeypatch):
         settings.wikipedia_timeout = 20
 
 
-def test_load_settings_fails_when_timeout_is_not_a_number(monkeypatch):
-    monkeypatch.setenv("WIKIPEDIA_TIMEOUT", "abc")
+@pytest.mark.parametrize("timeout", ["abc", "", "1.5", "0", "00", "-1"])
+def test_load_settings_rejects_invalid_timeout(monkeypatch, timeout):
+    monkeypatch.setenv("WIKIPEDIA_TIMEOUT", timeout)
 
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match=INVALID_TIMEOUT_MESSAGE):
         load_settings()

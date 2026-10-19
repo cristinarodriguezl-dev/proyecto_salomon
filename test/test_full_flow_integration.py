@@ -6,6 +6,7 @@ from unittest.mock import patch
 import requests
 
 from src.main import main
+from src.settings import Settings
 from src.scraping.wikipedia_client import WIKIPEDIA_SEARCH_URL
 from src.translation.translation_service import TranslationService
 
@@ -71,7 +72,7 @@ def test_search_enrich_translate_export_txt_and_exit_without_real_apis(
         patch("src.ai.ai_client.genai.Client") as gemini_client,
         patch("src.main.load_settings") as load_settings,
     ):
-        load_settings.return_value.gemini_api_key = "fake-key"
+        load_settings.return_value = Settings("fake-key", 10)
         gemini_client.return_value.models.generate_content.return_value.text = ENRICHED
 
         main()

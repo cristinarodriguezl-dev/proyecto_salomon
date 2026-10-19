@@ -7,6 +7,7 @@ from src.ai.content_enhancer import ContentEnhancer
 from src.ai.content_summarizer import ContentSummarizer
 from src.exceptions import EnrichmentError, ExportError, SearchError, TranslationError
 from src.export.export_service import ExportService
+from src.scraping.wikipedia_client import WikipediaClient
 from src.services.search_service import WikipediaSearchService
 from src.settings import load_settings
 from src.translation.article_translator import ArticleTranslator
@@ -33,8 +34,16 @@ def main() -> None:
 
     Ante errores de red de Wikipedia, permite reintentar.
     """
-    search_service = WikipediaSearchService()
-    ai_client = AIClient(load_settings().gemini_api_key)
+    try:
+        settings = load_settings()
+    except ValueError as error:
+        print(f"Error de configuración: {error}")
+        return
+
+    search_service = WikipediaSearchService(
+        wikipedia_client=WikipediaClient(timeout_seconds=settings.wikipedia_timeout)
+    )
+    ai_client = AIClient(settings.gemini_api_key)
     content_enhancer = ContentEnhancer(ai_client)
     content_summarizer = ContentSummarizer(ai_client)
     summary_confirmation_prompt = SummaryConfirmationPrompt()
