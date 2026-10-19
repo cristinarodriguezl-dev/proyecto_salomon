@@ -1,12 +1,15 @@
 """Selecciona un idioma admitido para la traducción del artículo."""
 
+import questionary
+
 from src.translation.translation_service import TranslationService
 
 
 class TranslationLanguagePrompt:
     """Pide un idioma de destino o permite omitir la traducción."""
 
-    SKIP_OPTION = "0"
+    MENU_MESSAGE = "\n¿A qué idioma quieres traducir el contenido?"
+    SKIP_LABEL = "Omitir traducción"
 
     def __init__(self, translation_service: TranslationService) -> None:
         self.translation_service = translation_service
@@ -15,21 +18,12 @@ class TranslationLanguagePrompt:
         """Devuelve el código elegido; ``None`` indica que se omite."""
         languages = self.translation_service.get_supported_languages()
 
-        while True:
-            print("\n¿A qué idioma quieres traducir el contenido?")
-            for code, name in languages.items():
-                print(f"{code} - {name}")
-            print(f"{self.SKIP_OPTION} - Omitir traducción")
+        choices = [
+            questionary.Choice(f"{code} - {name}", code)
+            for code, name in languages.items()
+        ]
+        choices.append(questionary.Choice(self.SKIP_LABEL))
 
-            choice = input("Escribe el código o nombre del idioma: ").strip().casefold()
-            if choice == self.SKIP_OPTION:
-                return None
+        choice = questionary.select(self.MENU_MESSAGE, choices=choices).unsafe_ask()
 
-            for code, name in languages.items():
-                if choice in (code.casefold(), name.casefold()):
-                    return code
-
-            print(
-                "Idioma no admitido. Elige uno de los idiomas mostrados "
-                "o 0 para omitir la traducción."
-            )
+        return None if choice == self.SKIP_LABEL else choice

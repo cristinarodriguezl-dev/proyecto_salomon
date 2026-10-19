@@ -1,9 +1,28 @@
 """Pruebas de la selección del contenido que se exportará."""
 
+from types import SimpleNamespace
+
 import pytest
+import questionary
 
 from src.models.article import Article
 from src.ui.export_version_prompt import ExportVersionPrompt
+
+
+def install_questionary(monkeypatch, answers):
+    """Sustituye las preguntas de questionary por respuestas fijas."""
+    pending = iter(answers)
+    prompts = SimpleNamespace(messages=[], choices=[])
+
+    def question(message, *args, **kwargs):
+        prompts.messages.append(message)
+        prompts.choices.append(kwargs.get("choices"))
+        return SimpleNamespace(unsafe_ask=lambda: next(pending))
+
+    for name in ("text", "select", "confirm"):
+        monkeypatch.setattr(questionary, name, question)
+
+    return prompts
 
 
 @pytest.fixture
@@ -19,15 +38,15 @@ def article() -> Article:
 @pytest.mark.parametrize(
     ("choice", "expected"),
     [
-        ("1", "Primer párrafo.\n\nSegundo párrafo."),
-        ("2", "Texto enriquecido.\n\nOtro párrafo."),
-        ("3", "Translated text."),
+        ("Original", "Primer párrafo.\n\nSegundo párrafo."),
+        ("Enriquecida", "Texto enriquecido.\n\nOtro párrafo."),
+        ("Traducida", "Translated text."),
     ],
 )
 def test_each_choice_returns_the_selected_content(
     article, monkeypatch, choice, expected
 ) -> None:
-    monkeypatch.setattr("builtins.input", lambda _: choice)
+    install_questionary(monkeypatch, [choice])
 
     assert ExportVersionPrompt().ask(article) == expected
     assert article.paragraphs == ["Primer párrafo.", "Segundo párrafo."]
@@ -36,48 +55,31 @@ def test_each_choice_returns_the_selected_content(
 
 
 def test_only_original_is_offered_when_other_versions_are_missing(
-    monkeypatch, capsys
+    monkeypatch
 ) -> None:
     article = Article(title="Árbol", paragraphs=["Texto original."])
-    monkeypatch.setattr("builtins.input", lambda _: "1")
+    prompts = install_questionary(monkeypatch, ["Original"])
 
     assert ExportVersionPrompt().ask(article) == "Texto original."
-    output = capsys.readouterr().out
-    assert "1. Original" in output
-    assert "2. Enriquecida" not in output
-    assert "3. Traducida" not in output
+    assert prompts.messages == [ExportVersionPrompt.MENU_MESSAGE]
+    assert prompts.choices == [["Original"]]
 
 
-def test_translation_is_offered_even_without_enrichment(monkeypatch, capsys) -> None:
+def test_translation_is_offered_even_without_enrichment(monkeypatch) -> None:
     article = Article(
         title="Árbol", paragraphs=["Original."], translated="Translation."
     )
-    monkeypatch.setattr("builtins.input", lambda _: "3")
+    prompts = install_questionary(monkeypatch, ["Traducida"])
 
     assert ExportVersionPrompt().ask(article) == "Translation."
-    output = capsys.readouterr().out
-    assert "2. Enriquecida" not in output
-    assert "3. Traducida" in output
+    assert prompts.choices == [["Original", "Traducida"]]
 
 
-def test_unavailable_choice_is_explained_and_can_be_corrected(
-    monkeypatch, capsys
-) -> None:
-    article = Article(title="Árbol", paragraphs=["Original."])
-    choices = iter(["2", " 1 "])
-    monkeypatch.setattr("builtins.input", lambda _: next(choices))
-
-    assert ExportVersionPrompt().ask(article) == "Original."
-    assert "Esa versión no está disponible" in capsys.readouterr().out
-
-
-def test_blank_version_is_not_offered(monkeypatch, capsys) -> None:
+def test_blank_version_is_not_offered(monkeypatch) -> None:
     article = Article(
         title="Árbol", paragraphs=["Original."], enriched="   ", translated="\n"
     )
-    monkeypatch.setattr("builtins.input", lambda _: "1")
+    prompts = install_questionary(monkeypatch, ["Original"])
 
     assert ExportVersionPrompt().ask(article) == "Original."
-    output = capsys.readouterr().out
-    assert "2. Enriquecida" not in output
-    assert "3. Traducida" not in output
+    assert prompts.choices == [["Original"]]

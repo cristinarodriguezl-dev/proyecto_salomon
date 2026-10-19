@@ -9,7 +9,7 @@ Feature: Elegir la versión del artículo que se va a guardar
     When el usuario elige una de esas versiones
     Then se utiliza el texto de la versión elegida sin sustituir el original
 
-  Scenario: Intentar elegir una versión inexistente
+  Scenario: Solo se ofrecen las versiones disponibles
     Given un artículo que solo tiene contenido original
-    When el usuario elige una versión que no está disponible
-    Then se explica el problema y se permite elegir otra versión
+    When el menú de versiones se muestra
+    Then la única opción disponible es la versión original

@@ -3,7 +3,10 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-VALID_FORMATS = {"txt", "pdf"}
+import questionary
+
+EXPORT_DIRECTORY = Path("exports")
+VALID_FORMATS = ("txt", "pdf")
 INVALID_NAME_CHARACTERS = set('<>:"/\\|?*')
 RESERVED_WINDOWS_NAMES = {
     "CON", "PRN", "AUX", "NUL",
@@ -11,9 +14,8 @@ RESERVED_WINDOWS_NAMES = {
     "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
 }
 
-FORMAT_PROMPT = "Formato del archivo (TXT/PDF): "
-NAME_PROMPT = "Nombre del archivo (sin ruta; extensión opcional): "
-INVALID_FORMAT_MESSAGE = "Formato no válido. Escribe TXT o PDF."
+FORMAT_PROMPT = "Formato del archivo"
+NAME_PROMPT = "Nombre del archivo (sin ruta; extensión opcional)"
 EMPTY_NAME_MESSAGE = "El nombre del archivo no puede estar vacío."
 INVALID_NAME_MESSAGE = (
     "Nombre no válido. Escribe solo un nombre de archivo, "
@@ -22,10 +24,9 @@ INVALID_NAME_MESSAGE = (
 WRONG_EXTENSION_MESSAGE = (
     "La extensión del nombre debe coincidir con el formato elegido."
 )
-OVERWRITE_PROMPT = "El archivo '{path}' ya existe. ¿Quieres sobrescribirlo? (s/n): "
-INVALID_ANSWER_MESSAGE = "Respuesta no válida. Escribe s o n."
-YES_ANSWERS = {"s", "si", "sí"}
-NO_ANSWERS = {"n", "no"}
+OVERWRITE_PROMPT = "El archivo '{path}' ya existe. ¿Quieres sobrescribirlo?"
+YES_OPTION = "Sí"
+NO_OPTION = "No"
 
 @dataclass(frozen=True)
 class ExportDestination:
@@ -37,7 +38,7 @@ class ExportDestinationPrompt:
         file_format = self._ask_format()
 
         while True:
-            name = input(NAME_PROMPT).strip()
+            name = questionary.text(NAME_PROMPT).unsafe_ask().strip()
 
             try:
                 path = self._build_path(name, file_format)
@@ -52,25 +53,18 @@ class ExportDestinationPrompt:
 
     @staticmethod
     def _confirm_overwrite(path: Path) -> bool:
-        while True:
-            answer = input(OVERWRITE_PROMPT.format(path=path)).strip().casefold()
+        answer = questionary.select(
+            OVERWRITE_PROMPT.format(path=path), choices=[YES_OPTION, NO_OPTION]
+        ).unsafe_ask()
 
-            if answer in YES_ANSWERS:
-                return True
-            if answer in NO_ANSWERS:
-                return False
-
-            print(INVALID_ANSWER_MESSAGE)
+        return answer == YES_OPTION
 
     @staticmethod
     def _ask_format() -> str:
-        while True:
-            file_format = input(FORMAT_PROMPT).strip().lower()
+        choices = [file_format.upper() for file_format in VALID_FORMATS]
+        answer = questionary.select(FORMAT_PROMPT, choices=choices).unsafe_ask()
 
-            if file_format in VALID_FORMATS:
-                return file_format
-
-            print(INVALID_FORMAT_MESSAGE)
+        return answer.lower()
 
     @staticmethod
     def _build_path(name: str, file_format: str) -> Path:
@@ -103,4 +97,4 @@ class ExportDestinationPrompt:
         ):
             raise ValueError(INVALID_NAME_MESSAGE)
 
-        return Path(destination_name)
+        return EXPORT_DIRECTORY / destination_name

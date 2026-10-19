@@ -1,31 +1,50 @@
 """Tests de SummaryConfirmationPrompt."""
 
-from src.ui.summary_confirmation_prompt import SummaryConfirmationPrompt
+from types import SimpleNamespace
+
+import questionary
+
+from src.ui.summary_confirmation_prompt import (
+    NO_OPTION,
+    OPTIONS,
+    PROMPT_MESSAGE,
+    YES_OPTION,
+    SummaryConfirmationPrompt,
+)
+
+
+def install_questionary(monkeypatch, answers):
+    """Sustituye las preguntas de questionary por respuestas fijas."""
+    pending = iter(answers)
+    prompts = SimpleNamespace(messages=[], choices=[])
+
+    def question(message, *args, **kwargs):
+        prompts.messages.append(message)
+        prompts.choices.append(kwargs.get("choices"))
+        return SimpleNamespace(unsafe_ask=lambda: next(pending))
+
+    for name in ("text", "select", "confirm"):
+        monkeypatch.setattr(questionary, name, question)
+
+    return prompts
 
 
 def test_ask_returns_true_when_the_answer_is_yes(monkeypatch) -> None:
-    monkeypatch.setattr("builtins.input", lambda _: "s")
-
-    assert SummaryConfirmationPrompt().ask() is True
-
-
-def test_ask_accepts_si_with_accent_and_surrounding_spaces(monkeypatch) -> None:
-    monkeypatch.setattr("builtins.input", lambda _: " Sí ")
+    install_questionary(monkeypatch, [YES_OPTION])
 
     assert SummaryConfirmationPrompt().ask() is True
 
 
 def test_ask_returns_false_when_the_answer_is_no(monkeypatch) -> None:
-    monkeypatch.setattr("builtins.input", lambda _: "n")
+    install_questionary(monkeypatch, [NO_OPTION])
 
     assert SummaryConfirmationPrompt().ask() is False
 
 
-def test_ask_repeats_until_the_answer_is_valid(monkeypatch, capsys) -> None:
-    answers = iter(["", "quizá", "no"])
-    monkeypatch.setattr("builtins.input", lambda _: next(answers))
+def test_ask_offers_exactly_the_yes_and_no_options(monkeypatch) -> None:
+    prompts = install_questionary(monkeypatch, [YES_OPTION])
 
-    result = SummaryConfirmationPrompt().ask()
+    SummaryConfirmationPrompt().ask()
 
-    assert result is False
-    assert capsys.readouterr().out.count("Respuesta no válida") == 2
+    assert prompts.messages == [PROMPT_MESSAGE]
+    assert prompts.choices == [OPTIONS]

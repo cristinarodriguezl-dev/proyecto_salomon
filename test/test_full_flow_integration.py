@@ -1,14 +1,33 @@
 """Prueba el recorrido completo sin consultar servicios externos."""
 
 import json
+from types import SimpleNamespace
 from unittest.mock import patch
 
+import questionary
 import requests
 
 from src.main import main
 from src.settings import Settings
 from src.scraping.wikipedia_client import WIKIPEDIA_SEARCH_URL
 from src.translation.translation_service import TranslationService
+from src.ui.export_destination_prompt import EXPORT_DIRECTORY
+
+
+def install_questionary(monkeypatch, answers):
+    """Sustituye las preguntas de questionary por respuestas fijas."""
+    pending = iter(answers)
+    prompts = SimpleNamespace(messages=[], choices=[])
+
+    def question(message, *args, **kwargs):
+        prompts.messages.append(message)
+        prompts.choices.append(kwargs.get("choices"))
+        return SimpleNamespace(unsafe_ask=lambda: next(pending))
+
+    for name in ("text", "select", "confirm"):
+        monkeypatch.setattr(questionary, name, question)
+
+    return prompts
 
 
 WIKIPEDIA_HTML = """
@@ -44,8 +63,10 @@ def test_search_enrich_translate_export_txt_and_exit_without_real_apis(
     monkeypatch, tmp_path, capsys
 ) -> None:
     """Comprueba el flujo real simulando solo las respuestas externas."""
-    answers = iter(["Árbol", "n", "en", "s", "3", "txt", "article", "2"])
-    monkeypatch.setattr("builtins.input", lambda _prompt: next(answers))
+    answers = [
+        "Árbol", "No", "en", "Sí", "Traducida", "TXT", "article", "Salir",
+    ]
+    install_questionary(monkeypatch, answers)
     monkeypatch.chdir(tmp_path)
 
     def fake_get(url: str, **kwargs) -> requests.Response:
@@ -91,10 +112,10 @@ def test_search_enrich_translate_export_txt_and_exit_without_real_apis(
     assert "Primer original." in output
     assert ENRICHED in output
     assert "First enriched.\n\nSecond enriched." in output
-    assert "Archivo guardado: article.txt" in output
+    assert f"Archivo guardado: {EXPORT_DIRECTORY / 'article.txt'}" in output
     assert output.endswith("Programa finalizado.\n")
 
-    exported = (tmp_path / "article.txt").read_text(encoding="utf-8")
+    exported = (tmp_path / EXPORT_DIRECTORY / "article.txt").read_text(encoding="utf-8")
     assert exported.startswith("Árbol\n")
     assert "First enriched.\n\nSecond enriched." in exported
     assert ENRICHED not in exported

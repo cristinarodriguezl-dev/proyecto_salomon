@@ -64,6 +64,35 @@ def test_service_replaces_an_existing_file_with_the_new_content(
     assert "Contenido nuevo" in saved
 
 
+def test_service_creates_the_missing_export_directory(tmp_path: Path) -> None:
+    destination = ExportDestination("txt", tmp_path / "exports" / "articulo.txt")
+    service = ExportService({"txt": TxtExporter()})
+
+    service.export("Árbol", "Contenido", destination)
+
+    assert destination.path.exists()
+
+
+def test_service_reports_a_directory_that_cannot_be_created_as_export_error(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "exports").write_text("no es una carpeta", encoding="utf-8")
+    destination = ExportDestination("txt", tmp_path / "exports" / "articulo.txt")
+    service = ExportService({"txt": TxtExporter()})
+
+    with pytest.raises(ExportError, match="No se pudo guardar"):
+        service.export("Árbol", "Contenido", destination)
+
+
+def test_service_reports_a_directory_without_permission_as_export_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(Path, "mkdir", Mock(side_effect=PermissionError("sin permiso")))
+    destination = ExportDestination("txt", tmp_path / "exports" / "articulo.txt")
+    service = ExportService({"txt": TxtExporter()})
+
+    with pytest.raises(ExportError, match="No se pudo guardar.*sin permiso"):
+        service.export("Árbol", "Contenido", destination)
 def test_injected_exporters_do_not_fall_back_to_the_default_pdf_exporter(
     tmp_path: Path,
 ) -> None:

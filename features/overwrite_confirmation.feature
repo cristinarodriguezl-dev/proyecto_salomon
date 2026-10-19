@@ -11,7 +11,7 @@ Feature: Avisar si el archivo de destino ya existe
     Then: el archivo existente se conserva sin cambios
     And: el programa le pide otro nombre de archivo
 
-  Scenario: Corregir una respuesta no válida a la confirmación
+  Scenario: La confirmación solo admite sí o no
     Given: ya existe un archivo llamado informe.txt
-    When: el usuario responde algo distinto de sí o no a la confirmación
-    Then: recibe un mensaje claro y se le vuelve a preguntar
+    When: el usuario elige entre "Sí" y "No" con las flechas
+    Then: el programa aplica la opción elegida sin volver a preguntar

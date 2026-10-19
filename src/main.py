@@ -1,5 +1,11 @@
 """Coordina búsqueda, resumen, traducción, presentación y exportación del artículo."""
 
+import sys
+from pathlib import Path
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
 import requests
 
 from src.ai.ai_client import AIClient

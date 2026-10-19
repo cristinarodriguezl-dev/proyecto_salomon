@@ -25,6 +25,7 @@ class ExportService:
             raise ExportError(f"La exportación a {destination.file_format.upper()} aún no está disponible.")
 
         try:
+            destination.path.parent.mkdir(parents=True, exist_ok=True)
             exporter.export(title, content, destination.path)
         except OSError as error:
             raise ExportError(f"No se pudo guardar '{destination.path}': {error}") from error
