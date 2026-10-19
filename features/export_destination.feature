@@ -4,10 +4,10 @@ Feature: Elegir el formato y el nombre para exportar un documento
     When escribe el nombre informe
     Then el destino preparado es informe.txt
 
-  Scenario: Corregir un formato no admitido
-    Given el usuario introduce un formato distinto de TXT o PDF
-    When el programa le pide el formato de nuevo
-    Then puede elegir PDF y continuar con el nombre del archivo
+  Scenario: Elegir el formato desde el menú
+    Given el menú de formato se muestra
+    When el usuario elige PDF con las flechas y pulsa Enter
+    Then puede escribir el nombre del archivo
 
   Scenario: Corregir un nombre vacío
     Given el usuario elige un formato admitido

@@ -1,8 +1,10 @@
 """Pruebas del recorrido de traducción y presentación en terminal."""
 
+from types import SimpleNamespace
 from unittest.mock import call, patch
 
 import pytest
+import questionary
 
 from src.exceptions import EnrichmentError, TranslationError
 from src.main import ORIGINAL_KEPT_MESSAGE, main
@@ -12,6 +14,24 @@ from src.ui.article_display import (
     TRANSLATED_HEADER,
     show_translated_article,
 )
+from src.ui.export_destination_prompt import EXPORT_DIRECTORY
+from src.ui.translation_language_prompt import TranslationLanguagePrompt
+
+
+def install_questionary(monkeypatch, answers):
+    """Sustituye las preguntas de questionary por respuestas fijas."""
+    pending = iter(answers)
+    prompts = SimpleNamespace(messages=[], choices=[])
+
+    def question(message, *args, **kwargs):
+        prompts.messages.append(message)
+        prompts.choices.append(kwargs.get("choices"))
+        return SimpleNamespace(unsafe_ask=lambda: next(pending))
+
+    for name in ("text", "select", "confirm"):
+        monkeypatch.setattr(questionary, name, question)
+
+    return prompts
 
 
 @pytest.fixture
@@ -40,13 +60,15 @@ def flow_dependencies():
         yield article, ai_class.return_value, service
 
 
-def test_main_validates_language_translates_and_exports_saved_version(
+def test_main_translates_and_exports_the_saved_version(
     flow_dependencies, monkeypatch, tmp_path, capsys
 ) -> None:
     article, _ai_client, service = flow_dependencies
     service.translate.side_effect = ["First enriched.", "Second enriched."]
-    answers = iter(["Árbol", "xx", "Inglés", "s", "3", "txt", "article", "2"])
-    monkeypatch.setattr("builtins.input", lambda _message: next(answers))
+    install_questionary(
+        monkeypatch,
+        ["Árbol", "en", "Sí", "Traducida", "TXT", "article", "Salir"],
+    )
     monkeypatch.chdir(tmp_path)
 
     main()
@@ -58,9 +80,10 @@ def test_main_validates_language_translates_and_exports_saved_version(
         call("Segundo ampliado.", "en"),
     ]
     output = capsys.readouterr().out
-    assert "Idioma no admitido" in output
     assert f"{TRANSLATED_HEADER} (Inglés)\n\n{article.translated}\n" in output
-    assert article.translated in (tmp_path / "article.txt").read_text(encoding="utf-8")
+    assert article.translated in (
+        tmp_path / EXPORT_DIRECTORY / "article.txt"
+    ).read_text(encoding="utf-8")
 
 
 @pytest.mark.parametrize(
@@ -80,14 +103,15 @@ def test_main_retries_same_or_another_language_after_provider_failure(
         first,
         second,
     ]
-    answers = iter(["Árbol", "en", retry_language, "n", "2"])
-    monkeypatch.setattr("builtins.input", lambda _message: next(answers))
+    prompts = install_questionary(
+        monkeypatch, ["Árbol", "en", retry_language, "No", "Salir"]
+    )
 
     main()
 
     output = capsys.readouterr().out
     assert "MyMemory no responde" in output
-    assert output.count("¿A qué idioma quieres traducir el contenido?") == 2
+    assert prompts.messages.count(TranslationLanguagePrompt.MENU_MESSAGE) == 2
     assert f"{TRANSLATED_HEADER} ({language_name})" in output
     assert article.translated == f"{first}\n\n{second}"
     assert service.translate.call_args_list == [
@@ -102,8 +126,10 @@ def test_main_can_skip_translation_after_provider_failure(
 ) -> None:
     article, _ai_client, service = flow_dependencies
     service.translate.side_effect = TranslationError("MyMemory no disponible")
-    answers = iter(["Árbol", "en", "0", "n", "2"])
-    monkeypatch.setattr("builtins.input", lambda _message: next(answers))
+    install_questionary(
+        monkeypatch,
+        ["Árbol", "en", TranslationLanguagePrompt.SKIP_LABEL, "No", "Salir"],
+    )
 
     main()
 
@@ -120,8 +146,7 @@ def test_main_translates_original_paragraphs_when_gemini_fails(
     article, ai_client, service = flow_dependencies
     ai_client.generate_text.side_effect = EnrichmentError("Gemini no disponible")
     service.translate.side_effect = ["First original.", "Second original."]
-    answers = iter(["Árbol", "en", "n", "2"])
-    monkeypatch.setattr("builtins.input", lambda _message: next(answers))
+    install_questionary(monkeypatch, ["Árbol", "en", "No", "Salir"])
 
     main()
 

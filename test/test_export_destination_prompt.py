@@ -1,14 +1,14 @@
 """Pruebas de la selección del formato y destino de exportación."""
 
-from pathlib import Path
-from unittest.mock import Mock
+from types import SimpleNamespace
 
 import pytest
+import questionary
 
 from src.ui.export_destination_prompt import (
     EMPTY_NAME_MESSAGE,
+    EXPORT_DIRECTORY,
     FORMAT_PROMPT,
-    INVALID_FORMAT_MESSAGE,
     INVALID_NAME_MESSAGE,
     NAME_PROMPT,
     WRONG_EXTENSION_MESSAGE,
@@ -17,43 +17,41 @@ from src.ui.export_destination_prompt import (
 )
 
 
+def install_questionary(monkeypatch, answers):
+    """Sustituye las preguntas de questionary por respuestas fijas."""
+    pending = iter(answers)
+    prompts = SimpleNamespace(messages=[], choices=[])
+
+    def question(message, *args, **kwargs):
+        prompts.messages.append(message)
+        prompts.choices.append(kwargs.get("choices"))
+        return SimpleNamespace(unsafe_ask=lambda: next(pending))
+
+    for name in ("text", "select", "confirm"):
+        monkeypatch.setattr(questionary, name, question)
+
+    return prompts
+
+
 @pytest.mark.parametrize(
     ("answers", "expected"),
     [
-        ([" TXT ", " informe "], ExportDestination("txt", Path("informe.txt"))),
-        (["pdf", "informe.PDF"], ExportDestination("pdf", Path("informe.pdf"))),
+        (["TXT", " informe "], ExportDestination("txt", EXPORT_DIRECTORY / "informe.txt")),
+        (["PDF", "informe.PDF"], ExportDestination("pdf", EXPORT_DIRECTORY / "informe.pdf")),
     ],
 )
 def test_ask_returns_the_selected_format_and_destination(
-    answers, expected, monkeypatch, capsys
+    answers, expected, monkeypatch, tmp_path, capsys
 ) -> None:
-    fake_input = Mock(side_effect=answers)
-    monkeypatch.setattr("builtins.input", fake_input)
+    monkeypatch.chdir(tmp_path)
+    prompts = install_questionary(monkeypatch, answers)
 
     result = ExportDestinationPrompt().ask()
 
     assert result == expected
-    assert [call.args[0] for call in fake_input.call_args_list] == [
-        FORMAT_PROMPT,
-        NAME_PROMPT,
-    ]
+    assert prompts.messages == [FORMAT_PROMPT, NAME_PROMPT]
+    assert prompts.choices[0] == ["TXT", "PDF"]
     assert capsys.readouterr().out == ""
-
-
-def test_ask_repeats_an_empty_or_unsupported_format(monkeypatch, capsys) -> None:
-    fake_input = Mock(side_effect=["  ", "docx", " PDF ", "informe"])
-    monkeypatch.setattr("builtins.input", fake_input)
-
-    result = ExportDestinationPrompt().ask()
-
-    assert result == ExportDestination("pdf", Path("informe.pdf"))
-    assert [call.args[0] for call in fake_input.call_args_list] == [
-        FORMAT_PROMPT,
-        FORMAT_PROMPT,
-        FORMAT_PROMPT,
-        NAME_PROMPT,
-    ]
-    assert capsys.readouterr().out == f"{INVALID_FORMAT_MESSAGE}\n" * 2
 
 
 @pytest.mark.parametrize(
@@ -72,17 +70,13 @@ def test_ask_repeats_an_empty_or_unsupported_format(monkeypatch, capsys) -> None
     ],
 )
 def test_ask_repeats_an_invalid_name_and_allows_correction(
-    invalid_name, message, monkeypatch, capsys
+    invalid_name, message, monkeypatch, tmp_path, capsys
 ) -> None:
-    fake_input = Mock(side_effect=["txt", invalid_name, "informe.txt"])
-    monkeypatch.setattr("builtins.input", fake_input)
+    monkeypatch.chdir(tmp_path)
+    prompts = install_questionary(monkeypatch, ["TXT", invalid_name, "informe.txt"])
 
     result = ExportDestinationPrompt().ask()
 
-    assert result == ExportDestination("txt", Path("informe.txt"))
-    assert [call.args[0] for call in fake_input.call_args_list] == [
-        FORMAT_PROMPT,
-        NAME_PROMPT,
-        NAME_PROMPT,
-    ]
+    assert result == ExportDestination("txt", EXPORT_DIRECTORY / "informe.txt")
+    assert prompts.messages == [FORMAT_PROMPT, NAME_PROMPT, NAME_PROMPT]
     assert capsys.readouterr().out == f"{message}\n"

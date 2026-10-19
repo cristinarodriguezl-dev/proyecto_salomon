@@ -1,19 +1,18 @@
 """Ask whether the user wants a summary of the enriched content."""
 
+import questionary
+
+PROMPT_MESSAGE = "¿Quieres resumir el contenido enriquecido?"
+YES_OPTION = "Sí"
+NO_OPTION = "No"
+OPTIONS = [YES_OPTION, NO_OPTION]
+
 
 class SummaryConfirmationPrompt:
     """Require an explicit yes or no before generating the summary."""
 
     def ask(self) -> bool:
-        """Ask until the answer is valid and return True if the user wants it."""
-        while True:
-            answer = (
-                input("¿Quieres resumir el contenido enriquecido? (s/n): ")
-                .strip()
-                .casefold()
-            )
-            if answer in {"s", "sí", "si"}:
-                return True
-            if answer in {"n", "no"}:
-                return False
-            print("Respuesta no válida. Escribe s o n.")
+        """Return True if the user wants the summary."""
+        answer = questionary.select(PROMPT_MESSAGE, choices=OPTIONS).unsafe_ask()
+
+        return answer == YES_OPTION

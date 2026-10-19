@@ -1,26 +1,24 @@
 """Prompt asking the user whether to run another search or exit."""
 
+import questionary
+
 
 class SearchContinuationPrompt:
-    """Asks the user what to do after a search and validates the answer."""
+    """Asks the user what to do after a search."""
 
-    SEARCH_AGAIN_OPTION = "1"
-    EXIT_OPTION = "2"
-    VALID_OPTIONS = {SEARCH_AGAIN_OPTION, EXIT_OPTION}
+    MENU_MESSAGE = "\n¿Qué quieres hacer ahora?"
+    SEARCH_AGAIN_OPTION = "Buscar otro tema"
+    EXIT_OPTION = "Salir"
+    OPTIONS = [SEARCH_AGAIN_OPTION, EXIT_OPTION]
 
     def ask_search_again(self) -> bool:
-        """Ask until a valid option is entered.
+        """Ask what to do next.
 
         Returns:
             True if the user wants another search, False if they want to exit.
         """
-        while True:
-            print("\n¿Qué quieres hacer ahora?")
-            print("1. Buscar otro tema")
-            print("2. Salir")
-            option = input("Elige una opción (1/2): ").strip()
+        choice = questionary.select(
+            self.MENU_MESSAGE, choices=self.OPTIONS
+        ).unsafe_ask()
 
-            if option in self.VALID_OPTIONS:
-                return option == self.SEARCH_AGAIN_OPTION
-
-            print("Opción no válida. Escribe 1 o 2.")
+        return choice == self.SEARCH_AGAIN_OPTION

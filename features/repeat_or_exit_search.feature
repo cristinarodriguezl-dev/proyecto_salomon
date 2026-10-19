@@ -9,7 +9,8 @@
        When el usuario elige salir
        Then el sistema muestra "Programa finalizado." y termina sin errores
 
-     Scenario: Falla porque la opción elegida no es válida
+     Scenario: Solo se pueden elegir las opciones del menú
        Given un artículo mostrado en la terminal
-       When el usuario introduce una opción que no existe
-       Then el sistema informa de que la opción no es válida y vuelve a preguntar
+       When el menú de continuación se muestra
+       Then las únicas opciones disponibles son "Buscar otro tema" y "Salir"
+       And la respuesta se confirma con la tecla Enter

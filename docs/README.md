@@ -4,6 +4,8 @@ Aplicación de consola (línea de comandos) que busca un tema en **Wikipedia**, 
 
 No hace falta saber programar para usarla: la propia aplicación te va preguntando qué quieres buscar y qué hacer a continuación.
 
+Las preguntas se contestan con el teclado: escribes cuando te pide un texto y, cuando te ofrece opciones, te mueves con las **flechas** y confirmas con **Enter**.
+
 ---
 
 ## 🎯 ¿Qué hace la app?
@@ -56,7 +58,7 @@ Cada paso es una acción que la aplicación hace por ti, en este orden:
 
 - **Paso 8 — Te pregunta qué hacer.**
 
-  Te ofrece "Buscar otro tema" o "Salir". Si eliges buscar otro, el proceso empieza de nuevo; si eliges salir, muestra "Programa finalizado." y termina.
+  Te ofrece "Buscar otro tema" o "Salir". Te mueves entre las dos opciones con las flechas y confirmas con Enter: si eliges buscar otro, el proceso empieza de nuevo; si eliges salir, muestra "Programa finalizado." y termina.
 
 ---
 
@@ -101,7 +103,7 @@ while True:
 
 ```python
 while True:
-    topic = input(PROMPT_MESSAGE).strip()
+    topic = questionary.text(PROMPT_MESSAGE).unsafe_ask().strip()
 
     if topic:
         return topic
@@ -111,28 +113,23 @@ while True:
 
 - **En pocas palabras:** lee lo que escribes. Si solo presionas "Enter" sin escribir nada, te pide que lo intentes otra vez.
 
-- **Detalle técnico:** `input()` lee de la consola y `.strip()` elimina los espacios del principio y del final. El bucle garantiza que nunca se devuelve una cadena vacía.
+- **Detalle técnico:** `questionary.text()` abre una línea de texto en la terminal y `unsafe_ask()` devuelve lo escrito (Ctrl+C se propaga igual que con `input()`); `.strip()` elimina los espacios del principio y del final. El bucle garantiza que nunca se devuelve una cadena vacía.
 
 ---
 
 ### 3. Repetir o salir: `src/ui/search_continuation_prompt.py`
 
 ```python
-while True:
-    print("\n¿Qué quieres hacer ahora?")
-    print("1. Buscar otro tema")
-    print("2. Salir")
-    option = input("Elige una opción (1/2): ").strip()
+choice = questionary.select(
+    self.MENU_MESSAGE, choices=self.OPTIONS
+).unsafe_ask()
 
-    if option in self.VALID_OPTIONS:
-        return option == self.SEARCH_AGAIN_OPTION
-
-    print("Opción no válida. Escribe 1 o 2.")
+return choice == self.SEARCH_AGAIN_OPTION
 ```
 
-- **En pocas palabras:** después de ver el artículo, pregunta qué hacer. Solo acepta "1" o "2"; si escribes cualquier otra cosa, te lo vuelve a preguntar.
+- **En pocas palabras:** después de ver el artículo, pregunta qué hacer. Eliges "Buscar otro tema" o "Salir" moviéndote con las flechas y pulsando Enter; ya no hace falta escribir números.
 
-- **Detalle técnico:** la clase guarda las opciones válidas en `VALID_OPTIONS`. El método devuelve `True` cuando el usuario elige seguir (`"1"`) y `False` cuando elige salir (`"2"`), reutilizando el patrón de bucle de `topic_input.py`.
+- **Detalle técnico:** `questionary.select()` solo admite las opciones de la lista, así que la pregunta no puede recibir una respuesta inválida y el bucle de validación desaparece. Devuelve el texto elegido, que el método traduce en `True` (seguir) o `False` (salir).
 
 ---
 

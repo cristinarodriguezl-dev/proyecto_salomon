@@ -1,8 +1,10 @@
 """Pruebas del recorrido principal con la opción de resumir el contenido."""
 
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
+import questionary
 
 from src.ai.content_summarizer import NO_ENRICHED_CONTENT_MESSAGE
 from src.exceptions import EnrichmentError
@@ -13,6 +15,22 @@ from src.ui.summary_display import SUMMARY_HEADER
 
 ENRICHED_TEXT = "Texto enriquecido por IA."
 SUMMARY_TEXT = "Resumen generado por IA."
+
+
+def install_questionary(monkeypatch, answers):
+    """Sustituye las preguntas de questionary por respuestas fijas."""
+    pending = iter(answers)
+    prompts = SimpleNamespace(messages=[], choices=[])
+
+    def question(message, *args, **kwargs):
+        prompts.messages.append(message)
+        prompts.choices.append(kwargs.get("choices"))
+        return SimpleNamespace(unsafe_ask=lambda: next(pending))
+
+    for name in ("text", "select", "confirm"):
+        monkeypatch.setattr(questionary, name, question)
+
+    return prompts
 
 
 @pytest.fixture
@@ -30,8 +48,7 @@ def flow_dependencies():
 
 
 def run_main(monkeypatch) -> None:
-    answers = iter(["Árbol", "n", "2"])
-    monkeypatch.setattr("builtins.input", lambda _message: next(answers))
+    install_questionary(monkeypatch, ["Árbol", "No", "Salir"])
     main()
 
 
