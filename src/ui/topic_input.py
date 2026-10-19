@@ -1,0 +1,17 @@
+"""Terminal input for selecting a Wikipedia search topic."""
+
+import questionary
+
+PROMPT_MESSAGE = "Enter the topic to search in Wikipedia"
+EMPTY_INPUT_MESSAGE = "The topic cannot be empty. Try again."
+
+
+def request_topic() -> str:
+    """Ask until a non-empty topic is entered and return it without outer spaces."""
+    while True:
+        topic = questionary.text(PROMPT_MESSAGE).unsafe_ask().strip()
+
+        if topic:
+            return topic
+
+        print(EMPTY_INPUT_MESSAGE)
