@@ -12,6 +12,7 @@ from src.main import main
 from src.scraping.wikipedia_client import USER_AGENT, WIKIPEDIA_SEARCH_URL
 from src.ui.article_display import ENRICHED_HEADER
 from src.ui.export_destination_prompt import EXPORT_DIRECTORY
+from src.ui.article_display import ENRICHED_HEADER, ORIGINAL_HEADER, SEPARATOR
 
 ENRICHED_TEXT = "Texto enriquecido por IA."
 
@@ -53,7 +54,8 @@ SUCCESS_RESPONSE = make_response(
 )
 
 ARTICLE_OUTPUT = (
-    "Árbol\n\nPrimer párrafo.\n\nSegundo párrafo.\n"
+    f"Árbol\n=====\n\n{ORIGINAL_HEADER}\n\n"
+    f"Primer párrafo.\n\nSegundo párrafo.\n\n{SEPARATOR}\n\n"
     f"{ENRICHED_HEADER}\n\n{ENRICHED_TEXT}\n"
 )
 EXIT_OUTPUT = "Programa finalizado.\n"

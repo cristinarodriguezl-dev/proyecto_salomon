@@ -19,6 +19,7 @@ from src.main import ORIGINAL_KEPT_MESSAGE, main
 from src.scraping.wikipedia_client import WIKIPEDIA_SEARCH_URL
 from src.ui.article_display import ENRICHED_HEADER
 from src.ui.export_destination_prompt import EXPORT_DIRECTORY
+from src.ui.article_display import ENRICHED_HEADER, ORIGINAL_HEADER, SEPARATOR
 
 ARTICLE_RESPONSE = requests.Response()
 ARTICLE_RESPONSE.status_code = 200
@@ -75,7 +76,10 @@ def test_main_keeps_original_article_when_gemini_fails(
         main()
 
     output = capsys.readouterr().out
-    assert "Árbol\n\nPrimer párrafo.\n" in output
+    assert (
+        f"Árbol\n=====\n\n{ORIGINAL_HEADER}\n\nPrimer párrafo.\n\n{SEPARATOR}\n\n"
+        in output
+    )
     assert f"{expected_message}\n{ORIGINAL_KEPT_MESSAGE}\n" in output
     assert ENRICHED_HEADER not in output
     assert output.endswith("Programa finalizado.\n")

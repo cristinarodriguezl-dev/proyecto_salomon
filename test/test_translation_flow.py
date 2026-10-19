@@ -8,6 +8,7 @@ import questionary
 
 from src.exceptions import EnrichmentError, TranslationError
 from src.main import ORIGINAL_KEPT_MESSAGE, main
+from src.settings import Settings
 from src.models.article import Article
 from src.ui.article_display import (
     EMPTY_TRANSLATED_MESSAGE,
@@ -45,7 +46,7 @@ def flow_dependencies():
     ) as ai_class, patch("src.main.TranslationService") as translation_class, patch(
         "src.main.load_settings"
     ) as settings, patch("src.main.SummaryConfirmationPrompt") as summary_prompt_class:
-        settings.return_value.gemini_api_key = "fake-key"
+        settings.return_value = Settings("fake-key", 10)
         summary_prompt_class.return_value.ask.return_value = False
         search_class.return_value.search.return_value = article
         ai_class.return_value.generate_text.return_value = (

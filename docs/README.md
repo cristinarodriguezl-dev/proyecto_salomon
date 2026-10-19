@@ -1,6 +1,6 @@
 # 📚 Content Enrichment (Salomón)
 
-Aplicación de consola (línea de comandos) que busca un tema en **Wikipedia**, muestra el artículo y lo mejora con **inteligencia artificial**.
+Aplicación de consola que busca un tema en **Wikipedia**, enriquece el artículo con **Google Gemini**, permite resumirlo y traducirlo con **MyMemory**, y guarda la versión elegida en **TXT o PDF**.
 
 No hace falta saber programar para usarla: la propia aplicación te va preguntando qué quieres buscar y qué hacer a continuación.
 
@@ -19,6 +19,12 @@ Las preguntas se contestan con el teclado: escribes cuando te pide un texto y, c
 - Pide a la inteligencia artificial (Google Gemini) que amplíe y mejore ese texto.
 
 - Muestra el artículo mejorado en pantalla.
+
+- Ofrece un resumen del contenido enriquecido y lo muestra en la terminal.
+
+- Permite traducir al alemán, inglés, español, francés, italiano o portugués, conservando el orden y la separación de los párrafos.
+
+- Permite guardar la versión original, enriquecida o traducida en TXT o PDF, con el nombre que elijas.
 
 - Te pregunta si quieres buscar otro tema o salir del programa.
 
@@ -54,9 +60,21 @@ Cada paso es una acción que la aplicación hace por ti, en este orden:
 
 - **Paso 7 — Muestra el artículo mejorado.**
 
-  Imprime el resultado de la IA justo debajo del original.
+  Imprime el resultado de la IA debajo del original. Si Gemini falla, explica el problema y conserva el artículo original para continuar.
 
-- **Paso 8 — Te pregunta qué hacer.**
+- **Paso 8 — Ofrece generar un resumen.**
+
+  Si respondes que sí, pide a Gemini un resumen del texto enriquecido y lo muestra en la terminal. Si no hay contenido enriquecido o el servicio falla, informa del problema y continúa. El resumen se muestra, pero no aparece entre las versiones disponibles para guardar.
+
+- **Paso 9 — Ofrece traducir.**
+
+  Puedes elegir un código o nombre de idioma admitido, o escribir `0` para omitir la traducción. Se traduce el contenido enriquecido; si no existe, se usa el original. La traducción se guarda por separado y se muestra con el nombre del idioma. Ante un fallo, puedes elegir otro idioma, reintentar u omitir.
+
+- **Paso 10 — Ofrece guardar el resultado.**
+
+  Si aceptas, eliges una de las versiones disponibles: original, enriquecida o traducida. Después indicas TXT o PDF y un nombre de archivo sin ruta. Se guarda en el directorio desde el que ejecutas el programa. Si el archivo existe, se pide confirmación antes de sobrescribirlo; si rechazas, puedes indicar otro nombre. Un error de escritura se muestra sin impedir continuar o salir.
+
+- **Paso 11 — Te pregunta qué hacer.**
 
   Te ofrece "Buscar otro tema" o "Salir". Te mueves entre las dos opciones con las flechas y confirmas con Enter: si eliges buscar otro, el proceso empieza de nuevo; si eliges salir, muestra "Programa finalizado." y termina.
 
@@ -72,30 +90,19 @@ En cada parte del código verás dos explicaciones:
 
 ### 1. El director de orquesta: `src/main.py`
 
-Es el punto de entrada. No hace el trabajo pesado: llama a las demás piezas en el orden correcto.
+Es el punto de entrada. Carga y valida la configuración una sola vez, construye los servicios y coordina los pasos anteriores. El tiempo de espera configurado llega al cliente de Wikipedia:
 
 ```python
-while True:
-    topic = request_topic()
-
-    try:
-        article = search_service.search(topic)
-    except (requests.exceptions.RequestException, TimeoutError) as error:
-        print(error)
-        continue
-
-    show_original_article(article)
-    article = content_enhancer.enhance(article)
-    show_enriched_article(article)
-
-    if not continuation_prompt.ask_search_again():
-        print("Programa finalizado.")
-        return
+settings = load_settings()
+search_service = WikipediaSearchService(
+    wikipedia_client=WikipediaClient(timeout_seconds=settings.wikipedia_timeout)
+)
+ai_client = AIClient(settings.gemini_api_key)
 ```
 
-- **En pocas palabras:** el `while True` significa "repite esto". Si la búsqueda falla, vuelve a preguntarte el tema; si sale bien, muestra el artículo, lo mejora y te pregunta si quieres continuar.
+- **En pocas palabras:** si la búsqueda falla, vuelve a pedir un tema. Si sale bien, presenta el artículo y ofrece resumen, traducción y guardado antes de preguntar si quieres continuar.
 
-- **Detalle técnico:** el `try/except` captura errores de red (`RequestException`) y de tiempo de espera (`TimeoutError`) para reintentar sin cerrar el programa. `ask_search_again()` devuelve `True` o `False`; cuando es `False` se sale con `return`.
+- **Detalle técnico:** captura errores de búsqueda, enriquecimiento, resumen, traducción y exportación en cada etapa. Una configuración inválida se informa antes de iniciar los clientes. Un fallo de Gemini conserva el original; un fallo de traducción repite la selección de idioma. `ask_search_again()` decide si empieza otra consulta o termina.
 
 ---
 
@@ -183,7 +190,7 @@ class Article:
     summary: str = ""
 ```
 
-- **En pocas palabras:** es una "ficha" donde se guarda lo encontrado sobre el tema: el título y los párrafos. Los campos `enriched`, `translated` y `summary` están reservados para el texto mejorado por la IA y para funciones futuras.
+- **En pocas palabras:** es una "ficha" donde se guardan el título y los párrafos originales. Los campos `enriched`, `translated` y `summary` contienen, respectivamente, el texto mejorado, su traducción y el resumen. Estas versiones se guardan sin sustituir los párrafos originales.
 
 - **Detalle técnico:** un `dataclass` genera automáticamente el `__init__` y el `__repr__`. Los campos con valor por defecto (`""`) permiten crear instancias con solo el título y los párrafos.
 
@@ -217,6 +224,8 @@ Esta parte ya está escrita y probada:
 
 - **`content_enhancer.py`** junta los párrafos, pide el texto mejorado a la IA y lo guarda en el campo `enriched` del artículo.
 
+- **`content_summarizer.py`** pide un resumen del contenido enriquecido y lo guarda en `summary` cuando el usuario lo solicita.
+
 Ejemplo de instrucción (en `prompts.py`):
 
 ```text
@@ -233,9 +242,9 @@ original text, and do not invent... Return only the enriched article text.
 
 ### 9. Mostrar el artículo: `src/ui/article_display.py`
 
-- **En pocas palabras:** imprime en pantalla el artículo original y, debajo, el mejorado por la IA, con un encabezado que los diferencia.
+- **En pocas palabras:** muestra el artículo original, el mejorado por la IA y la traducción disponible. El resumen se presenta desde `summary_display.py`.
 
-- **Detalle técnico:** `show_original_article` imprime el título y los párrafos separados; `show_enriched_article` imprime el encabezado `CONTENIDO ENRIQUECIDO (IA)` y el texto, o un mensaje si no hay contenido.
+- **Detalle técnico:** `show_original_article` imprime el título y los párrafos separados; `show_enriched_article` imprime `CONTENIDO ENRIQUECIDO (IA)`; `show_translated_article` imprime `CONTENIDO TRADUCIDO` con el idioma de destino y el contenido de `article.translated`.
 
 ---
 
@@ -243,7 +252,16 @@ original text, and do not invent... Return only the enriched article text.
 
 - **En pocas palabras:** lee tu configuración desde un archivo `.env`, como la clave de Gemini y cuántos segundos esperar a Wikipedia.
 
-- **Detalle técnico:** `load_settings()` usa `python-dotenv` para cargar las variables de entorno (`GEMINI_API_KEY`, `WIKIPEDIA_TIMEOUT`) y devuelve un `Settings` inmutable (`frozen=True`).
+- **Detalle técnico:** `python-dotenv` carga el archivo `.env` y `load_settings()` devuelve un `Settings` inmutable (`frozen=True`). `WIKIPEDIA_TIMEOUT` debe ser un entero mayor que cero; si falta se usan 10 segundos. `main()` pasa ese valor al cliente de Wikipedia y muestra un error controlado si la configuración no es válida.
+
+---
+
+### 11. Traducción y exportación
+
+- `TranslationService` consulta directamente la API HTTP de MyMemory y valida los idiomas. `ArticleTranslator` traduce cada párrafo por separado y solo guarda la traducción completa en `article.translated` cuando termina correctamente.
+- Los selectores de terminal recogen la versión, el formato y el nombre del documento. Solo se permite guardar una versión que exista en el artículo.
+- `ExportService` selecciona `TxtExporter` o `PdfExporter`. Ambos guardan el título y el contenido elegido. El TXT usa UTF-8 y un encabezado subrayado; el PDF organiza el título y los párrafos en páginas A4.
+- Los nombres no pueden incluir rutas ni caracteres prohibidos. La extensión se añade si falta y debe coincidir con el formato elegido. El archivo queda en el directorio de ejecución; no se crea una carpeta de exportaciones automáticamente.
 
 ---
 
@@ -255,25 +273,17 @@ proyecto_salomon/
 │   ├── main.py                            → Punto de entrada (dirige todo)
 │   ├── settings.py                        → Configuración (.env)
 │   ├── exceptions.py                      → Errores personalizados
-│   ├── ui/
-│   │   ├── topic_input.py                 → Pide el tema
-│   │   ├── search_continuation_prompt.py  → Pregunta repetir o salir
-│   │   └── article_display.py             → Muestra el artículo
-│   ├── services/
-│   │   └── search_service.py              → Coordina búsqueda + parseo
-│   ├── scraping/
-│   │   ├── wikipedia_client.py            → Descarga la página
-│   │   └── wikipedia_parser.py            → Extrae título y párrafos
-│   ├── models/
-│   │   └── article.py                     → Guarda los datos del artículo
-│   ├── ai/
-│   │   ├── ai_client.py                   → Conexión con Gemini
-│   │   ├── prompts.py                     → Instrucción para la IA
-│   │   └── content_enhancer.py            → Pide el texto mejorado
-│   └── export/
-│       └── exporter.py                    → Exportación a archivos (pendiente)
+│   ├── ui/                               → Preguntas y presentación en terminal
+│   ├── services/                         → Coordinación de búsqueda y parseo
+│   ├── scraping/                         → Cliente y parser de Wikipedia
+│   ├── models/                           → Article y sus distintas versiones
+│   ├── ai/                               → Cliente Gemini, enriquecimiento y resumen
+│   ├── translation/                      → MyMemory y traducción por párrafos
+│   └── export/                           → Servicio y exportadores TXT/PDF
+├── docs/README.md                        → Documentación de instalación y uso
 ├── features/                              → Escenarios de ejemplo (Gherkin)
 ├── test/                                  → Pruebas automáticas
+├── pytest.ini                            → Cobertura mínima automatizada
 ├── requirements.txt                       → Dependencias
 └── .env.example                           → Ejemplo de configuración
 ```
@@ -312,6 +322,8 @@ proyecto_salomon/
   WIKIPEDIA_TIMEOUT=10
   ```
 
+  El tiempo de espera se expresa en segundos y debe ser un entero positivo. Por ejemplo, `WIKIPEDIA_TIMEOUT=5` aplica cinco segundos a cada consulta a Wikipedia. La clave de Gemini se necesita para enriquecer y resumir; si falta o falla la IA, el programa informa y permite continuar con el artículo original.
+
 - **Paso 5 — Ejecutar la app:**
 
   ```bash
@@ -321,7 +333,7 @@ proyecto_salomon/
 - **Paso 6 — Ejecutar las pruebas (opcional):**
 
   ```bash
-  pytest
+  python -m pytest
   ```
 
 ---
@@ -338,8 +350,14 @@ El proyecto incluye pruebas automáticas en la carpeta `test/` que cubren:
 
 - Los prompts, el cliente de IA y la configuración.
 
-- El flujo completo en `test_main.py`, usando respuestas simuladas para no depender de internet.
+- La traducción por párrafos, las respuestas defectuosas de MyMemory y la validación de textos e idiomas.
 
-Se ejecutan con `pytest`. La cobertura mínima exigida es del 70 % y está configurada en `pytest.ini`.
+- La selección de versiones, la confirmación de sobrescritura y la exportación real a TXT y PDF.
+
+- El flujo completo en `test_full_flow_integration.py`, simulando Wikipedia, Gemini y MyMemory para no depender de claves, cuotas ni disponibilidad de las APIs.
+
+- La aplicación del tiempo de espera de Wikipedia desde `main()`, su valor predeterminado y el manejo de una configuración inválida.
+
+Se ejecutan con `python -m pytest`. El umbral automatizado actual es del 70 % y está configurado en `pytest.ini`. El informe muestra la cobertura medida y las líneas pendientes; superar ese umbral no equivale a alcanzar el objetivo del 100 % de HU-19.
 
 También hay escenarios de ejemplo en la carpeta `features/` (formato Gherkin) que describen el comportamiento esperado en lenguaje natural.

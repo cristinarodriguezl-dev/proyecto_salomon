@@ -2,6 +2,8 @@
 
 from src.models.article import Article
 
+ORIGINAL_HEADER = "CONTENIDO ORIGINAL"
+SEPARATOR = "========"
 ENRICHED_HEADER = "CONTENIDO ENRIQUECIDO (IA)"
 EMPTY_ENRICHED_MESSAGE = "No hay contenido enriquecido para mostrar."
 TRANSLATED_HEADER = "CONTENIDO TRADUCIDO"
@@ -11,9 +13,15 @@ EMPTY_TRANSLATED_MESSAGE = "No hay contenido traducido para mostrar."
 def show_original_article(article: Article) -> None:
     """Muestra el título y los párrafos originales de un artículo."""
     print(article.title)
+    print("=" * len(article.title))
+    print()
+    print(ORIGINAL_HEADER)
     print()
 
     print("\n\n".join(article.paragraphs))
+    print()
+    print(SEPARATOR)
+    print()
 
 
 def show_enriched_article(article: Article) -> None:

@@ -93,3 +93,26 @@ def test_service_reports_a_directory_without_permission_as_export_error(
 
     with pytest.raises(ExportError, match="No se pudo guardar.*sin permiso"):
         service.export("Árbol", "Contenido", destination)
+def test_injected_exporters_do_not_fall_back_to_the_default_pdf_exporter(
+    tmp_path: Path,
+) -> None:
+    txt_exporter = Mock(spec=Exporter)
+    service = ExportService({"txt": txt_exporter})
+    destination = ExportDestination("pdf", tmp_path / "articulo.pdf")
+
+    with pytest.raises(ExportError, match="PDF aún no está disponible"):
+        service.export("Árbol", "Contenido", destination)
+
+    txt_exporter.export.assert_not_called()
+    assert not destination.path.exists()
+
+
+def test_an_explicit_empty_exporter_map_disables_default_formats(
+    tmp_path: Path,
+) -> None:
+    destination = ExportDestination("txt", tmp_path / "articulo.txt")
+
+    with pytest.raises(ExportError, match="TXT aún no está disponible"):
+        ExportService({}).export("Árbol", "Contenido", destination)
+
+    assert not destination.path.exists()
