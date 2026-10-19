@@ -72,7 +72,7 @@ Cada paso es una acción que la aplicación hace por ti, en este orden:
 
 - **Paso 10 — Ofrece guardar el resultado.**
 
-  Si aceptas, eliges una de las versiones disponibles: original, enriquecida o traducida. Después indicas TXT o PDF y un nombre de archivo sin ruta. Se guarda en el directorio desde el que ejecutas el programa. Si el archivo existe, se pide confirmación antes de sobrescribirlo; si rechazas, puedes indicar otro nombre. Un error de escritura se muestra sin impedir continuar o salir.
+  Si aceptas, eliges una de las versiones disponibles: original, enriquecida o traducida. Después indicas TXT o PDF y un nombre de archivo sin ruta. Se guarda en la carpeta `exports/`, dentro del directorio desde el que ejecutas el programa. La carpeta se crea automáticamente al exportar si todavía no existe. Si el archivo existe, se pide confirmación antes de sobrescribirlo; si rechazas, puedes indicar otro nombre. Un error de escritura se muestra sin impedir continuar o salir.
 
 - **Paso 11 — Te pregunta qué hacer.**
 
@@ -261,7 +261,7 @@ original text, and do not invent... Return only the enriched article text.
 - `TranslationService` consulta directamente la API HTTP de MyMemory y valida los idiomas. `ArticleTranslator` traduce cada párrafo por separado y solo guarda la traducción completa en `article.translated` cuando termina correctamente.
 - Los selectores de terminal recogen la versión, el formato y el nombre del documento. Solo se permite guardar una versión que exista en el artículo.
 - `ExportService` selecciona `TxtExporter` o `PdfExporter`. Ambos guardan el título y el contenido elegido. El TXT usa UTF-8 y un encabezado subrayado; el PDF organiza el título y los párrafos en páginas A4.
-- Los nombres no pueden incluir rutas ni caracteres prohibidos. La extensión se añade si falta y debe coincidir con el formato elegido. El archivo queda en el directorio de ejecución; no se crea una carpeta de exportaciones automáticamente.
+- Los nombres no pueden incluir rutas ni caracteres prohibidos. La extensión se añade si falta y debe coincidir con el formato elegido. Los archivos TXT y PDF se guardan en `exports/`, una ruta relativa al directorio de ejecución. Por ejemplo, si ejecutas el programa desde `proyecto_salomon/`, el nombre `informe` en formato TXT se guarda en `proyecto_salomon/exports/informe.txt`. `ExportService` crea la carpeta automáticamente al guardar si no existe y comunica los errores de creación o escritura para permitir continuar o salir.
 
 ---
 
