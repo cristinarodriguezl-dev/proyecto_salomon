@@ -6,6 +6,7 @@ import pytest
 import requests
 
 from src.main import main
+from src.settings import Settings
 from src.models.article import Article
 from src.translation.translation_service import (
     CONNECTION_ERROR_MESSAGE,
@@ -28,7 +29,7 @@ def main_dependencies():
     ) as summary_prompt_class:
         search_class.return_value.search.return_value = article
         ai_class.return_value.generate_text.return_value = ENRICHED_TEXT
-        settings.return_value.gemini_api_key = "fake_key"
+        settings.return_value = Settings("fake_key", 10)
         summary_prompt_class.return_value.ask.return_value = False
         yield
 

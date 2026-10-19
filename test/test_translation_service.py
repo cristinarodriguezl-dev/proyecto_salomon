@@ -122,3 +122,78 @@ def test_translate_rejects_a_single_word_over_the_request_limit(get) -> None:
         TranslationService().translate(content, target_language="en")
 
     get.assert_not_called()
+
+
+@pytest.mark.parametrize("content", ["", " \n ", None, 42])
+def test_translate_rejects_empty_or_non_text_content_without_http(content) -> None:
+    with patch("src.translation.translation_service.requests.get") as get:
+        with pytest.raises(ValueError, match="No hay contenido para traducir"):
+            TranslationService().translate(content, target_language="en")
+
+    get.assert_not_called()
+
+
+@pytest.mark.parametrize("language", ["", "  ", None, 42])
+@pytest.mark.parametrize("argument", ["source_language", "target_language"])
+def test_translate_rejects_missing_or_non_text_languages_without_http(
+    argument, language
+) -> None:
+    languages = {"source_language": "es", "target_language": "en"}
+    languages[argument] = language
+    with patch("src.translation.translation_service.requests.get") as get:
+        with pytest.raises(ValueError, match="Debes indicar un idioma válido"):
+            TranslationService().translate("Hola", **languages)
+
+    get.assert_not_called()
+
+
+def test_translate_rejects_an_unsupported_source_language_without_http() -> None:
+    with patch("src.translation.translation_service.requests.get") as get:
+        with pytest.raises(ValueError, match="Idioma no admitido"):
+            TranslationService().translate("Hola", "en", source_language="xx")
+
+    get.assert_not_called()
+
+
+def test_translate_preserves_text_when_source_and_target_are_the_same() -> None:
+    content = "  Hola.\n\nSegundo párrafo.  "
+    with patch("src.translation.translation_service.requests.get") as get:
+        result = TranslationService().translate(content, "es", "Español")
+
+    assert result == content
+    get.assert_not_called()
+
+
+@pytest.mark.parametrize("error_type", [ValueError, TypeError, AttributeError])
+def test_translate_wraps_unreadable_provider_json(error_type) -> None:
+    response = make_response()
+    error = error_type("Respuesta defectuosa")
+    response.json.side_effect = error
+    with patch(
+        "src.translation.translation_service.requests.get", return_value=response
+    ):
+        with pytest.raises(TranslationError, match="respuesta no válida") as raised:
+            TranslationService().translate("Hola", "en")
+
+    assert raised.value.__cause__ is error
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        None,
+        [],
+        {},
+        {"responseStatus": 200},
+        {"responseStatus": 200, "responseData": []},
+        {"responseStatus": 200, "responseData": {"translatedText": 42}},
+    ],
+)
+def test_translate_rejects_malformed_provider_payload(payload) -> None:
+    response = make_response()
+    response.json.return_value = payload
+    with patch(
+        "src.translation.translation_service.requests.get", return_value=response
+    ):
+        with pytest.raises(TranslationError, match="MyMemory"):
+            TranslationService().translate("Hola", "en")

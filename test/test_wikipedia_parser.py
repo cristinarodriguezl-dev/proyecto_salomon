@@ -110,3 +110,9 @@ def test_is_disambiguation_page_returns_false_for_regular_article() -> None:
     """
 
     assert WikipediaParser().is_disambiguation_page(html) is False
+
+
+def test_extract_paragraphs_returns_empty_without_article_content() -> None:
+    html = '<h1 id="firstHeading">Wikipedia</h1><nav><p>Menú</p></nav>'
+
+    assert WikipediaParser().extract_paragraphs(html) == []
