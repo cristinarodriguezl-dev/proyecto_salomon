@@ -62,3 +62,28 @@ def test_service_replaces_an_existing_file_with_the_new_content(
     saved = destination.path.read_text(encoding="utf-8")
     assert "Versión anterior" not in saved
     assert "Contenido nuevo" in saved
+
+
+def test_injected_exporters_do_not_fall_back_to_the_default_pdf_exporter(
+    tmp_path: Path,
+) -> None:
+    txt_exporter = Mock(spec=Exporter)
+    service = ExportService({"txt": txt_exporter})
+    destination = ExportDestination("pdf", tmp_path / "articulo.pdf")
+
+    with pytest.raises(ExportError, match="PDF aún no está disponible"):
+        service.export("Árbol", "Contenido", destination)
+
+    txt_exporter.export.assert_not_called()
+    assert not destination.path.exists()
+
+
+def test_an_explicit_empty_exporter_map_disables_default_formats(
+    tmp_path: Path,
+) -> None:
+    destination = ExportDestination("txt", tmp_path / "articulo.txt")
+
+    with pytest.raises(ExportError, match="TXT aún no está disponible"):
+        ExportService({}).export("Árbol", "Contenido", destination)
+
+    assert not destination.path.exists()
