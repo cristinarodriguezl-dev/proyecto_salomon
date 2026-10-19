@@ -80,3 +80,12 @@ def test_ask_repeats_an_invalid_name_and_allows_correction(
     assert result == ExportDestination("txt", EXPORT_DIRECTORY / "informe.txt")
     assert prompts.messages == [FORMAT_PROMPT, NAME_PROMPT, NAME_PROMPT]
     assert capsys.readouterr().out == f"{message}\n"
+
+
+def test_ask_does_not_create_the_export_directory(monkeypatch, tmp_path) -> None:
+    monkeypatch.chdir(tmp_path)
+    install_questionary(monkeypatch, ["TXT", "informe"])
+
+    ExportDestinationPrompt().ask()
+
+    assert not (tmp_path / EXPORT_DIRECTORY).exists()

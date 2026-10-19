@@ -345,3 +345,26 @@ def test_main_allows_another_search_after_an_export_error(
         in output
     )
     assert output.endswith(EXIT_OUTPUT)
+
+
+def test_main_keeps_running_when_the_export_directory_cannot_be_created(
+    monkeypatch, tmp_path, capsys, fake_ai_client
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / EXPORT_DIRECTORY).write_text("no es una carpeta", encoding="utf-8")
+    answers = [
+        "Árbol", "Sí", "Original", "TXT", "articulo",
+        "Buscar otro tema", "Música", "No", "Salir",
+    ]
+    install_questionary(monkeypatch, answers)
+
+    with patch(
+        "src.scraping.wikipedia_client.requests.get",
+        side_effect=[SUCCESS_RESPONSE, SUCCESS_RESPONSE],
+    ) as get:
+        main()
+
+    assert get.call_count == 2
+    output = capsys.readouterr().out
+    assert f"No se pudo guardar '{EXPORT_DIRECTORY / 'articulo.txt'}'" in output
+    assert output.endswith(EXIT_OUTPUT)

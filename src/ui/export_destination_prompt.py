@@ -97,6 +97,4 @@ class ExportDestinationPrompt:
         ):
             raise ValueError(INVALID_NAME_MESSAGE)
 
-        EXPORT_DIRECTORY.mkdir(parents=True, exist_ok=True)
-
         return EXPORT_DIRECTORY / destination_name
