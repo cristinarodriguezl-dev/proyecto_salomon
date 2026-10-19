@@ -4,6 +4,8 @@ from src.models.article import Article
 from src.ui.article_display import (
     EMPTY_ENRICHED_MESSAGE,
     ENRICHED_HEADER,
+    ORIGINAL_HEADER,
+    SEPARATOR,
     show_enriched_article,
     show_original_article,
 )
@@ -18,7 +20,8 @@ def test_show_original_article_outputs_title_and_all_paragraphs(capsys) -> None:
     show_original_article(article)
 
     assert capsys.readouterr().out == (
-        "Árbol\n=====\n\nPrimer párrafo.\n\nSegundo párrafo.\n"
+        f"Árbol\n=====\n\n{ORIGINAL_HEADER}\n\n"
+        f"Primer párrafo.\n\nSegundo párrafo.\n\n{SEPARATOR}\n\n"
     )
 
 
